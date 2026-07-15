@@ -25,6 +25,7 @@ return new class extends Migration
             $table->integer('minimum_stock')->default(0);
             $table->text('description')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
