@@ -13,5 +13,27 @@
             <i class="bi bi-speedometer2"></i>
             <span>Dashboard</span>
         </a>
+
+        <a href="{{ route('categories.index') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('categories.*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-tags"></i>
+
+            <span>Kategori</span>
+        </a>
+
+        <a href="{{ route('suppliers.index') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('suppliers.*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-truck"></i>
+
+            <span>Supplier</span>
+        </a>
     </nav>
 </aside>
