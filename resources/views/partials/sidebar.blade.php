@@ -46,5 +46,16 @@
 
             <span>Barang</span>
         </a>
+
+        <a href="{{ route('goods-receipts.index') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('goods-receipts.*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-box-arrow-in-down"></i>
+
+            <span>Barang Masuk</span>
+        </a>
     </nav>
 </aside>

@@ -14,11 +14,30 @@ class GoodsReceiptDetail extends Model
         'purchase_price',
     ];
 
-    public function receipt(): BelongsTo
+    /**
+     * Mengubah nilai harga menjadi tipe desimal.
+     */
+    protected function casts(): array
     {
-        return $this->belongsTo(GoodsReceipt::class, 'goods_receipt_id');
+        return [
+            'purchase_price' => 'decimal:2',
+        ];
     }
 
+    /**
+     * Mendapatkan transaksi utama dari detail barang masuk.
+     */
+    public function receipt(): BelongsTo
+    {
+        return $this->belongsTo(
+            GoodsReceipt::class,
+            'goods_receipt_id'
+        );
+    }
+
+    /**
+     * Mendapatkan barang dari detail transaksi.
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);

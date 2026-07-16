@@ -16,20 +16,35 @@ class GoodsReceipt extends Model
         'note',
     ];
 
-    protected $casts = [
-        'received_at' => 'date',
-    ];
+    /**
+     * Mengubah tanggal penerimaan menjadi objek tanggal.
+     */
+    protected function casts(): array
+    {
+        return [
+            'received_at' => 'date',
+        ];
+    }
 
+    /**
+     * Mendapatkan supplier transaksi barang masuk.
+     */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /**
+     * Mendapatkan pengguna yang mencatat transaksi.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Mendapatkan seluruh detail transaksi barang masuk.
+     */
     public function details(): HasMany
     {
         return $this->hasMany(GoodsReceiptDetail::class);

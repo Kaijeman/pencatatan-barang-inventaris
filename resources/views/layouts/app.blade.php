@@ -31,5 +31,7 @@
 
         </div>
     </div>
+    {{-- Memuat JavaScript tambahan dari halaman tertentu. --}}
+    @stack('scripts')
 </body>
 </html>
