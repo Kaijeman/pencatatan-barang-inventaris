@@ -6,6 +6,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\GoodsIssueController;
+use App\Http\Controllers\StockOpnameController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -15,12 +16,24 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+    /**
+     * Route kategori.
+     */
     Route::resource('categories', CategoryController::class)
         ->except(['show']);
+    /**
+     * Route supplier.
+     */
     Route::resource('suppliers', SupplierController::class)
         ->except(['show']);
+    /**
+     * Route barang.
+     */
     Route::resource('items', ItemController::class)
         ->except(['show']);
+    /**
+     * Route barang masuk.
+     */
     Route::get('/goods-receipts', [GoodsReceiptController::class, 'index'])
         ->name('goods-receipts.index');
     Route::get('/goods-receipts/create', [GoodsReceiptController::class, 'create'])
@@ -29,6 +42,9 @@ Route::middleware(['auth'])->group(function () {
         ->name('goods-receipts.store');
     Route::get('/goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])
         ->name('goods-receipts.show');
+    /**
+     * Route barang keluar.
+     */
     Route::get('/goods-issues', [GoodsIssueController::class, 'index'])
         ->name('goods-issues.index');
     Route::get('/goods-issues/create', [GoodsIssueController::class, 'create'])
@@ -37,6 +53,17 @@ Route::middleware(['auth'])->group(function () {
         ->name('goods-issues.store');
     Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])
         ->name('goods-issues.show');
+    /**
+     * Route stock opname.
+     */
+    Route::get('/stock-opnames', [StockOpnameController::class, 'index'])
+        ->name('stock-opnames.index');
+    Route::get('/stock-opnames/create', [StockOpnameController::class, 'create'])
+        ->name('stock-opnames.create');
+    Route::post('/stock-opnames', [StockOpnameController::class, 'store'])
+        ->name('stock-opnames.store');
+    Route::get('/stock-opnames/{stockOpname}', [StockOpnameController::class, 'show'])
+        ->name('stock-opnames.show');
 });
 
 require __DIR__.'/auth.php';

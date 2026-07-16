@@ -68,5 +68,16 @@
 
             <span>Barang Keluar</span>
         </a>
+
+        <a href="{{ route('stock-opnames.index') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('stock-opnames.*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-clipboard-check"></i>
+
+            <span>Stock Opname</span>
+        </a>
     </nav>
 </aside>
