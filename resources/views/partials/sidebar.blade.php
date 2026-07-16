@@ -90,5 +90,29 @@
 
             <span>Laporan Stok</span>
         </a>
+
+        {{-- Menu laporan barang masuk --}}
+        <a href="{{ route('reports.goods-receipts') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('reports.goods-receipts*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-file-earmark-arrow-down"></i>
+
+            <span>Laporan Barang Masuk</span>
+        </a>
+
+        {{-- Menu laporan barang keluar --}}
+        <a href="{{ route('reports.goods-issues') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('reports.goods-issues*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-file-earmark-arrow-up"></i>
+
+            <span>Laporan Barang Keluar</span>
+        </a>
     </nav>
 </aside>

@@ -15,6 +15,7 @@
                 </p>
             </div>
 
+            {{-- Tombol ekspor laporan --}}
             <a href="{{ route(
                     'reports.stock.export',
                     request()->except('page')
@@ -30,6 +31,7 @@
         {{-- Ringkasan laporan --}}
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-5">
 
+            {{-- Total jenis barang --}}
             <div class="rounded-xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-medium text-slate-500">
                     Total Jenis Barang
@@ -40,6 +42,7 @@
                 </p>
             </div>
 
+            {{-- Total seluruh stok --}}
             <div class="rounded-xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-medium text-slate-500">
                     Total Seluruh Stok
@@ -50,6 +53,7 @@
                 </p>
             </div>
 
+            {{-- Total nilai persediaan --}}
             <div class="rounded-xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-medium text-slate-500">
                     Nilai Persediaan
@@ -65,6 +69,7 @@
                 </p>
             </div>
 
+            {{-- Jumlah stok menipis --}}
             <div class="rounded-xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-medium text-slate-500">
                     Stok Menipis
@@ -77,6 +82,7 @@
                 </p>
             </div>
 
+            {{-- Jumlah stok habis --}}
             <div class="rounded-xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-medium text-slate-500">
                     Stok Habis
@@ -92,71 +98,111 @@
 
         <div class="overflow-hidden rounded-xl bg-white shadow-sm">
 
-            {{-- Filter laporan --}}
+            {{-- Form filter laporan stok --}}
             <div class="border-b border-slate-200 p-5">
                 <form method="GET"
                       action="{{ route('reports.stock') }}"
-                      class="grid grid-cols-1 gap-3 lg:grid-cols-5">
+                      class="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:items-end">
 
+                    {{-- Pencarian barang --}}
                     <div class="lg:col-span-2">
+                        <label for="search"
+                               class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Pencarian
+                        </label>
+
                         <input type="text"
+                               id="search"
                                name="search"
                                value="{{ $filters['search'] }}"
                                placeholder="Cari kode, nama, kategori, atau satuan..."
                                class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+
+                        @error('search')
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
                     </div>
 
-                    <select name="category_id"
-                            class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                    {{-- Filter kategori --}}
+                    <div>
+                        <label for="category_id"
+                               class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Kategori
+                        </label>
 
-                        <option value="">
-                            Semua kategori
-                        </option>
+                        <select id="category_id"
+                                name="category_id"
+                                class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
 
-                        @foreach ($categories as $category)
-                            <option value="{{ $category->id }}"
-                                @selected(
-                                    (string) $filters['category_id']
-                                    === (string) $category->id
-                                )>
-
-                                {{ $category->name }}
+                            <option value="">
+                                Semua kategori
                             </option>
-                        @endforeach
-                    </select>
 
-                    <select name="stock_status"
-                            class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                            @foreach ($categories as $category)
+                                <option value="{{ $category->id }}"
+                                    @selected(
+                                        (string) $filters['category_id']
+                                        === (string) $category->id
+                                    )>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
 
-                        <option value="">
-                            Semua status stok
-                        </option>
+                        @error('category_id')
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
 
-                        <option value="available"
-                            @selected(
-                                $filters['stock_status']
-                                === 'available'
-                            )>
-                            Tersedia
-                        </option>
+                    {{-- Filter status stok --}}
+                    <div>
+                        <label for="stock_status"
+                               class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Status Stok
+                        </label>
 
-                        <option value="low"
-                            @selected(
-                                $filters['stock_status']
-                                === 'low'
-                            )>
-                            Menipis
-                        </option>
+                        <select id="stock_status"
+                                name="stock_status"
+                                class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
 
-                        <option value="out"
-                            @selected(
-                                $filters['stock_status']
-                                === 'out'
-                            )>
-                            Habis
-                        </option>
-                    </select>
+                            <option value="">
+                                Semua status
+                            </option>
 
+                            <option value="available"
+                                @selected(
+                                    $filters['stock_status'] === 'available'
+                                )>
+                                Tersedia
+                            </option>
+
+                            <option value="low"
+                                @selected(
+                                    $filters['stock_status'] === 'low'
+                                )>
+                                Menipis
+                            </option>
+
+                            <option value="out"
+                                @selected(
+                                    $filters['stock_status'] === 'out'
+                                )>
+                                Habis
+                            </option>
+                        </select>
+
+                        @error('stock_status')
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
+                    {{-- Tombol filter --}}
                     <div class="flex gap-2">
                         <button type="submit"
                                 class="flex-1 rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
@@ -164,17 +210,29 @@
                         </button>
 
                         <a href="{{ route('reports.stock') }}"
-                           class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+                           class="rounded-lg border border-slate-300 px-4 py-2.5 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
                             Reset
                         </a>
                     </div>
                 </form>
+
+                {{-- Keterangan filter aktif --}}
+                @if (
+                    $filters['search'] !== ''
+                    || $filters['category_id']
+                    || $filters['stock_status']
+                )
+                    <div class="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                        Tabel menampilkan data stok berdasarkan filter yang
+                        dipilih. Ringkasan di atas menampilkan kondisi seluruh
+                        persediaan.
+                    </div>
+                @endif
             </div>
 
             {{-- Tabel laporan stok --}}
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200">
-
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
@@ -215,28 +273,32 @@
                         @forelse ($items as $item)
                             <tr class="transition hover:bg-slate-50">
 
+                                {{-- Nomor urut --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-sm text-slate-500">
                                     {{ ($items->currentPage() - 1)
                                         * $items->perPage()
                                         + $loop->iteration }}
                                 </td>
 
+                                {{-- Informasi barang --}}
                                 <td class="px-5 py-4">
                                     <p class="font-semibold text-slate-800">
                                         {{ $item->name }}
                                     </p>
 
-                                    <p class="text-xs text-slate-500">
+                                    <p class="mt-1 text-xs text-slate-500">
                                         {{ $item->code }}
                                         ·
                                         {{ $item->unit }}
                                     </p>
                                 </td>
 
+                                {{-- Kategori barang --}}
                                 <td class="px-5 py-4 text-sm text-slate-600">
                                     {{ $item->category->name }}
                                 </td>
 
+                                {{-- Harga beli --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-right text-sm text-slate-600">
                                     Rp{{ number_format(
                                         $item->purchase_price,
@@ -246,17 +308,20 @@
                                     ) }}
                                 </td>
 
+                                {{-- Stok saat ini --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-center text-sm font-semibold text-slate-800">
                                     {{ number_format($item->stock) }}
                                     {{ $item->unit }}
                                 </td>
 
+                                {{-- Stok minimum --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-center text-sm text-slate-600">
                                     {{ number_format(
                                         $item->minimum_stock
                                     ) }}
                                 </td>
 
+                                {{-- Status stok --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-center">
                                     @if ((int) $item->stock === 0)
                                         <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
@@ -276,6 +341,7 @@
                                     @endif
                                 </td>
 
+                                {{-- Nilai persediaan --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-right text-sm font-semibold text-slate-800">
                                     Rp{{ number_format(
                                         $item->stock
@@ -298,13 +364,12 @@
                                     </p>
 
                                     <p class="mt-1 text-sm text-slate-400">
-                                        Coba ubah atau reset filter laporan.
+                                        Ubah atau reset filter laporan.
                                     </p>
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
-
                 </table>
             </div>
 

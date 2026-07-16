@@ -72,6 +72,20 @@ Route::middleware(['auth'])->group(function () {
         ->name('reports.stock');
     Route::get('/reports/stock/export', [ReportController::class, 'exportStock'])
         ->name('reports.stock.export');
+    /**
+     * Route laporan barang masuk.
+     */
+    Route::get('/reports/goods-receipts/export', [ReportController::class, 'exportGoodsReceipts'])
+        ->name('reports.goods-receipts.export');
+    Route::get('/reports/goods-receipts', [ReportController::class, 'goodsReceipts'])
+        ->name('reports.goods-receipts');
+    /**
+     * Route laporan barang keluar.
+     */
+    Route::get('/reports/goods-issues/export', [ReportController::class, 'exportGoodsIssues'])
+        ->name('reports.goods-issues.export');
+    Route::get('/reports/goods-issues', [ReportController::class, 'goodsIssues'])
+        ->name('reports.goods-issues');
 });
 
 require __DIR__.'/auth.php';

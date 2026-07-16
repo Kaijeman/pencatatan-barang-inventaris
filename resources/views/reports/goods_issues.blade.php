@@ -4,51 +4,83 @@
     <div class="space-y-6">
 
         {{-- Judul halaman --}}
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-slate-800">
-                    Stock Opname
+                    Laporan Barang Keluar
                 </h1>
 
                 <p class="mt-1 text-sm text-slate-500">
-                    Kelola pemeriksaan dan penyesuaian stok fisik gudang.
+                    Rekap pengeluaran barang dari gudang berdasarkan periode.
                 </p>
             </div>
 
-            {{-- Tombol tambah stock opname --}}
-            <a href="{{ route('stock-opnames.create') }}"
-               class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
+            {{-- Tombol ekspor laporan --}}
+            <a href="{{ route(
+                    'reports.goods-issues.export',
+                    request()->except('page')
+                ) }}"
+               class="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700">
 
-                <i class="bi bi-plus-lg"></i>
+                <i class="bi bi-file-earmark-spreadsheet"></i>
 
-                Tambah Stock Opname
+                Export CSV
             </a>
         </div>
 
-        {{-- Pesan berhasil --}}
-        @if (session('success'))
-            <div class="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                {{ session('success') }}
-            </div>
-        @endif
+        {{-- Ringkasan laporan --}}
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
 
-        {{-- Pesan gagal --}}
-        @if (session('error'))
-            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {{ session('error') }}
+            {{-- Total transaksi --}}
+            <div class="rounded-xl bg-white p-5 shadow-sm">
+                <p class="text-sm font-medium text-slate-500">
+                    Total Transaksi
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-slate-800">
+                    {{ number_format(
+                        $summary['total_transactions']
+                    ) }}
+                </p>
             </div>
-        @endif
+
+            {{-- Total barang keluar --}}
+            <div class="rounded-xl bg-white p-5 shadow-sm">
+                <p class="text-sm font-medium text-slate-500">
+                    Total Barang Keluar
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-red-600">
+                    {{ number_format(
+                        $summary['total_quantity']
+                    ) }}
+                </p>
+            </div>
+
+            {{-- Total tujuan pengeluaran --}}
+            <div class="rounded-xl bg-white p-5 shadow-sm">
+                <p class="text-sm font-medium text-slate-500">
+                    Jumlah Tujuan
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-slate-800">
+                    {{ number_format(
+                        $summary['total_destinations']
+                    ) }}
+                </p>
+            </div>
+        </div>
 
         <div class="overflow-hidden rounded-xl bg-white shadow-sm">
 
-            {{-- Form filter stock opname --}}
+            {{-- Form filter laporan --}}
             <div class="border-b border-slate-200 p-5">
                 <form method="GET"
-                      action="{{ route('stock-opnames.index') }}"
-                      class="grid grid-cols-1 gap-4 xl:grid-cols-5 xl:items-end">
+                      action="{{ route('reports.goods-issues') }}"
+                      class="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:items-end">
 
-                    {{-- Pencarian stock opname --}}
-                    <div class="xl:col-span-2">
+                    {{-- Pencarian --}}
+                    <div class="lg:col-span-2">
                         <label for="search"
                                class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Pencarian
@@ -57,8 +89,8 @@
                         <input type="text"
                                id="search"
                                name="search"
-                               value="{{ $search }}"
-                               placeholder="Cari kode, nama barang, atau petugas..."
+                               value="{{ $filters['search'] }}"
+                               placeholder="Cari nomor, tujuan, barang, atau petugas..."
                                class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
 
                         @error('search')
@@ -68,59 +100,42 @@
                         @enderror
                     </div>
 
-                    {{-- Filter tanggal opname --}}
+                    {{-- Filter tanggal awal --}}
                     <div>
-                        <label for="date"
+                        <label for="start_date"
                                class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Tanggal Opname
+                            Tanggal Awal
                         </label>
 
                         <input type="date"
-                               id="date"
-                               name="date"
-                               value="{{ $date }}"
+                               id="start_date"
+                               name="start_date"
+                               value="{{ $filters['start_date'] }}"
                                max="{{ now()->format('Y-m-d') }}"
                                class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
 
-                        @error('date')
+                        @error('start_date')
                             <p class="mt-2 text-sm text-red-600">
                                 {{ $message }}
                             </p>
                         @enderror
                     </div>
 
-                    {{-- Filter status selisih --}}
+                    {{-- Filter tanggal akhir --}}
                     <div>
-                        <label for="difference_status"
+                        <label for="end_date"
                                class="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Status Selisih
+                            Tanggal Akhir
                         </label>
 
-                        <select id="difference_status"
-                                name="difference_status"
-                                class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                        <input type="date"
+                               id="end_date"
+                               name="end_date"
+                               value="{{ $filters['end_date'] }}"
+                               max="{{ now()->format('Y-m-d') }}"
+                               class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
 
-                            <option value="">
-                                Semua selisih
-                            </option>
-
-                            <option value="positive"
-                                @selected($differenceStatus === 'positive')>
-                                Fisik lebih banyak
-                            </option>
-
-                            <option value="negative"
-                                @selected($differenceStatus === 'negative')>
-                                Fisik lebih sedikit
-                            </option>
-
-                            <option value="same"
-                                @selected($differenceStatus === 'same')>
-                                Tidak ada selisih
-                            </option>
-                        </select>
-
-                        @error('difference_status')
+                        @error('end_date')
                             <p class="mt-2 text-sm text-red-600">
                                 {{ $message }}
                             </p>
@@ -134,44 +149,59 @@
                             Filter
                         </button>
 
-                        <a href="{{ route('stock-opnames.index') }}"
+                        <a href="{{ route('reports.goods-issues') }}"
                            class="rounded-lg border border-slate-300 px-4 py-2.5 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
                             Reset
                         </a>
                     </div>
                 </form>
 
-                {{-- Keterangan filter aktif --}}
-                @if ($date || $differenceStatus || $search !== '')
+                {{-- Keterangan periode --}}
+                @if ($filters['start_date'] || $filters['end_date'])
                     <div class="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                        Menampilkan riwayat stock opname sesuai filter yang dipilih.
+                        Periode laporan:
+
+                        <span class="font-semibold">
+                            {{ $filters['start_date']
+                                ? \Carbon\Carbon::parse(
+                                    $filters['start_date']
+                                )->format('d/m/Y')
+                                : 'Awal data' }}
+                        </span>
+
+                        sampai
+
+                        <span class="font-semibold">
+                            {{ $filters['end_date']
+                                ? \Carbon\Carbon::parse(
+                                    $filters['end_date']
+                                )->format('d/m/Y')
+                                : 'Hari ini' }}
+                        </span>
                     </div>
                 @endif
             </div>
 
-            {{-- Tabel stock opname --}}
+            {{-- Tabel laporan barang keluar --}}
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200">
+
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                Tanggal
+                                Transaksi
                             </th>
 
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                Barang
+                                Tujuan
                             </th>
 
                             <th class="px-5 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                Stok Sistem
+                                Jenis Barang
                             </th>
 
                             <th class="px-5 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                Stok Fisik
-                            </th>
-
-                            <th class="px-5 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                Selisih
+                                Jumlah
                             </th>
 
                             <th class="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-500">
@@ -185,72 +215,51 @@
                     </thead>
 
                     <tbody class="divide-y divide-slate-200 bg-white">
-                        @forelse ($stockOpnames as $stockOpname)
+                        @forelse ($issues as $issue)
                             <tr class="transition hover:bg-slate-50">
 
-                                {{-- Tanggal opname --}}
-                                <td class="whitespace-nowrap px-5 py-4 text-sm text-slate-600">
-                                    {{ $stockOpname->opname_date->format('d/m/Y') }}
-                                </td>
-
-                                {{-- Informasi barang --}}
+                                {{-- Informasi transaksi --}}
                                 <td class="px-5 py-4">
                                     <p class="font-semibold text-slate-800">
-                                        {{ $stockOpname->item->name }}
+                                        {{ $issue->issue_number }}
                                     </p>
 
                                     <p class="mt-1 text-xs text-slate-500">
-                                        {{ $stockOpname->item->code }}
-                                        ·
-                                        {{ $stockOpname->item->category->name }}
+                                        {{ $issue->issued_at
+                                            ->format('d/m/Y') }}
                                     </p>
                                 </td>
 
-                                {{-- Stok sistem --}}
+                                {{-- Tujuan pengeluaran --}}
+                                <td class="px-5 py-4 text-sm text-slate-700">
+                                    {{ $issue->destination }}
+                                </td>
+
+                                {{-- Jumlah jenis barang --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-center text-sm text-slate-600">
                                     {{ number_format(
-                                        $stockOpname->system_stock
+                                        $issue->details_count
                                     ) }}
-                                    {{ $stockOpname->item->unit }}
                                 </td>
 
-                                {{-- Stok fisik --}}
+                                {{-- Total kuantitas barang --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-center text-sm font-semibold text-slate-700">
                                     {{ number_format(
-                                        $stockOpname->physical_stock
+                                        $issue->details_sum_quantity ?? 0
                                     ) }}
-                                    {{ $stockOpname->item->unit }}
-                                </td>
-
-                                {{-- Selisih stok --}}
-                                <td class="whitespace-nowrap px-5 py-4 text-center">
-                                    @if ($stockOpname->difference > 0)
-                                        <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                                            +{{ number_format(
-                                                $stockOpname->difference
-                                            ) }}
-                                        </span>
-                                    @elseif ($stockOpname->difference < 0)
-                                        <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                                            {{ number_format(
-                                                $stockOpname->difference
-                                            ) }}
-                                        </span>
-                                    @else
-                                        <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                                            Sesuai
-                                        </span>
-                                    @endif
                                 </td>
 
                                 {{-- Petugas pencatat --}}
                                 <td class="px-5 py-4 text-sm text-slate-600">
-                                    {{ $stockOpname->user->name }}
+                                    {{ $issue->user->name }}
                                 </td>
 
                                 {{-- Tombol detail --}}
                                 <td class="whitespace-nowrap px-5 py-4 text-center">
-                                    <a href="{{ route('stock-opnames.show', $stockOpname) }}"
+                                    <a href="{{ route(
+                                            'goods-issues.show',
+                                            $issue
+                                        ) }}"
                                        title="Lihat detail"
                                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700 transition hover:bg-blue-200">
 
@@ -260,17 +269,17 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7"
+                                <td colspan="6"
                                     class="px-6 py-12 text-center">
 
-                                    <i class="bi bi-clipboard-check text-4xl text-slate-300"></i>
+                                    <i class="bi bi-inbox text-4xl text-slate-300"></i>
 
                                     <p class="mt-3 font-medium text-slate-600">
-                                        Belum ada riwayat stock opname.
+                                        Tidak ada transaksi barang keluar yang sesuai.
                                     </p>
 
                                     <p class="mt-1 text-sm text-slate-400">
-                                        Tambahkan pemeriksaan stok fisik barang.
+                                        Coba ubah periode atau reset filter.
                                     </p>
                                 </td>
                             </tr>
@@ -280,9 +289,9 @@
             </div>
 
             {{-- Pagination --}}
-            @if ($stockOpnames->hasPages())
+            @if ($issues->hasPages())
                 <div class="border-t border-slate-200 px-6 py-4">
-                    {{ $stockOpnames->links() }}
+                    {{ $issues->links() }}
                 </div>
             @endif
         </div>
