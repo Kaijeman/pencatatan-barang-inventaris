@@ -35,5 +35,16 @@
 
             <span>Supplier</span>
         </a>
+
+        <a href="{{ route('items.index') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('items.*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-box-seam"></i>
+
+            <span>Barang</span>
+        </a>
     </nav>
 </aside>
