@@ -7,6 +7,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\GoodsIssueController;
 use App\Http\Controllers\StockOpnameController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -64,6 +65,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('stock-opnames.store');
     Route::get('/stock-opnames/{stockOpname}', [StockOpnameController::class, 'show'])
         ->name('stock-opnames.show');
+    /**
+     * Route laporan stok.
+     */
+    Route::get('/reports/stock', [ReportController::class, 'stock'])
+        ->name('reports.stock');
+    Route::get('/reports/stock/export', [ReportController::class, 'exportStock'])
+        ->name('reports.stock.export');
 });
 
 require __DIR__.'/auth.php';
