@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\GoodsReceiptController;
+use App\Http\Controllers\GoodsIssueController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +29,14 @@ Route::middleware(['auth'])->group(function () {
         ->name('goods-receipts.store');
     Route::get('/goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])
         ->name('goods-receipts.show');
+    Route::get('/goods-issues', [GoodsIssueController::class, 'index'])
+        ->name('goods-issues.index');
+    Route::get('/goods-issues/create', [GoodsIssueController::class, 'create'])
+        ->name('goods-issues.create');
+    Route::post('/goods-issues', [GoodsIssueController::class, 'store'])
+        ->name('goods-issues.store');
+    Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])
+        ->name('goods-issues.show');
 });
 
 require __DIR__.'/auth.php';

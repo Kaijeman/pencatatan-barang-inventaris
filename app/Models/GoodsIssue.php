@@ -16,15 +16,27 @@ class GoodsIssue extends Model
         'note',
     ];
 
-    protected $casts = [
-        'issued_at' => 'date',
-    ];
+    /**
+     * Mengubah tanggal pengeluaran menjadi objek tanggal.
+     */
+    protected function casts(): array
+    {
+        return [
+            'issued_at' => 'date',
+        ];
+    }
 
+    /**
+     * Mendapatkan pengguna yang mencatat transaksi.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Mendapatkan seluruh detail transaksi barang keluar.
+     */
     public function details(): HasMany
     {
         return $this->hasMany(GoodsIssueDetail::class);

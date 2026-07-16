@@ -57,5 +57,16 @@
 
             <span>Barang Masuk</span>
         </a>
+
+        <a href="{{ route('goods-issues.index') }}"
+        class="flex items-center gap-3 px-5 py-3 transition
+                {{ request()->routeIs('goods-issues.*')
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+            <i class="bi bi-box-arrow-up"></i>
+
+            <span>Barang Keluar</span>
+        </a>
     </nav>
 </aside>

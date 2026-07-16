@@ -13,11 +13,20 @@ class GoodsIssueDetail extends Model
         'quantity',
     ];
 
+    /**
+     * Mendapatkan transaksi utama dari detail barang keluar.
+     */
     public function issue(): BelongsTo
     {
-        return $this->belongsTo(GoodsIssue::class, 'goods_issue_id');
+        return $this->belongsTo(
+            GoodsIssue::class,
+            'goods_issue_id'
+        );
     }
 
+    /**
+     * Mendapatkan barang dari detail transaksi.
+     */
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
