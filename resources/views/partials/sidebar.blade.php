@@ -114,5 +114,19 @@
 
             <span>Laporan Barang Keluar</span>
         </a>
+
+        {{-- Menu manajemen pengguna khusus kepala gudang --}}
+        @if (auth()->user()->role === 'kepala_gudang')
+            <a href="{{ route('users.index') }}"
+            class="flex items-center gap-3 px-5 py-3 transition
+                    {{ request()->routeIs('users.*')
+                        ? 'bg-slate-700 text-white'
+                        : 'text-slate-300 hover:bg-slate-700 hover:text-white' }}">
+
+                <i class="bi bi-people"></i>
+
+                <span>Manajemen Pengguna</span>
+            </a>
+        @endif
     </nav>
 </aside>

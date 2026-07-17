@@ -8,6 +8,7 @@ use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\GoodsIssueController;
 use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -86,6 +87,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('reports.goods-issues.export');
     Route::get('/reports/goods-issues', [ReportController::class, 'goodsIssues'])
         ->name('reports.goods-issues');
+    /**
+     * Route manajemen pengguna.
+     */
+    Route::middleware('role:kepala_gudang')->group(function () {
+        Route::resource('users', UserController::class)
+            ->except(['show']);
+    });
 });
 
 require __DIR__.'/auth.php';

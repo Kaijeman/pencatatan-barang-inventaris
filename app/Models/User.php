@@ -2,25 +2,30 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable([
+    'name',
+    'email',
+    'password',
+    'role',
+])]
+#[Hidden([
+    'password',
+    'remember_token',
+])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory;
+    use Notifiable;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Mendefinisikan perubahan tipe data atribut.
      */
     protected function casts(): array
     {
@@ -30,16 +35,25 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Mendapatkan transaksi barang masuk pengguna.
+     */
     public function goodsReceipts(): HasMany
     {
         return $this->hasMany(GoodsReceipt::class);
     }
 
+    /**
+     * Mendapatkan transaksi barang keluar pengguna.
+     */
     public function goodsIssues(): HasMany
     {
         return $this->hasMany(GoodsIssue::class);
     }
 
+    /**
+     * Mendapatkan riwayat stock opname pengguna.
+     */
     public function stockOpnames(): HasMany
     {
         return $this->hasMany(StockOpname::class);
