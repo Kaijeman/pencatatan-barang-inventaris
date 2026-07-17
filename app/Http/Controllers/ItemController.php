@@ -6,9 +6,13 @@ use App\Http\Requests\Item\StoreItemRequest;
 use App\Http\Requests\Item\UpdateItemRequest;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\User;
+use App\Notifications\ItemCreatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
+use Throwable;
 
 class ItemController extends Controller
 {
@@ -23,36 +27,90 @@ class ItemController extends Controller
 
         $items = Item::query()
             ->with('category')
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('code', 'like', '%' . $search . '%')
-                        ->orWhere('name', 'like', '%' . $search . '%')
-                        ->orWhere('unit', 'like', '%' . $search . '%')
-                        ->orWhereHas('category', function ($categoryQuery) use ($search) {
-                            $categoryQuery->where('name', 'like', '%' . $search . '%');
-                        });
-                });
-            })
-            ->when($categoryId, function ($query) use ($categoryId) {
-                $query->where('category_id', $categoryId);
-            })
-            ->when($stockStatus === 'low', function ($query) {
-                $query->where('stock', '>', 0)
-                    ->whereColumn('stock', '<=', 'minimum_stock');
-            })
-            ->when($stockStatus === 'out', function ($query) {
-                $query->where('stock', 0);
-            })
-            ->when($stockStatus === 'available', function ($query) {
-                $query->whereColumn('stock', '>', 'minimum_stock');
-            })
+            ->when(
+                $search !== '',
+                function ($query) use ($search): void {
+                    $query->where(
+                        function ($query) use ($search): void {
+                            $query
+                                ->where(
+                                    'code',
+                                    'like',
+                                    '%' . $search . '%'
+                                )
+                                ->orWhere(
+                                    'name',
+                                    'like',
+                                    '%' . $search . '%'
+                                )
+                                ->orWhere(
+                                    'unit',
+                                    'like',
+                                    '%' . $search . '%'
+                                )
+                                ->orWhereHas(
+                                    'category',
+                                    function ($categoryQuery) use (
+                                        $search
+                                    ): void {
+                                        $categoryQuery->where(
+                                            'name',
+                                            'like',
+                                            '%' . $search . '%'
+                                        );
+                                    }
+                                );
+                        }
+                    );
+                }
+            )
+            ->when(
+                $categoryId,
+                function ($query) use ($categoryId): void {
+                    $query->where(
+                        'category_id',
+                        $categoryId
+                    );
+                }
+            )
+            ->when(
+                $stockStatus === 'low',
+                function ($query): void {
+                    $query
+                        ->where('stock', '>', 0)
+                        ->whereColumn(
+                            'stock',
+                            '<=',
+                            'minimum_stock'
+                        );
+                }
+            )
+            ->when(
+                $stockStatus === 'out',
+                function ($query): void {
+                    $query->where('stock', 0);
+                }
+            )
+            ->when(
+                $stockStatus === 'available',
+                function ($query): void {
+                    $query->whereColumn(
+                        'stock',
+                        '>',
+                        'minimum_stock'
+                    );
+                }
+            )
             ->orderBy('name')
             ->paginate(10)
             ->withQueryString();
 
         $categories = Category::query()
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get([
+                'id',
+                'name',
+            ]);
 
         return view('items.index', compact(
             'items',
@@ -70,7 +128,10 @@ class ItemController extends Controller
     {
         $categories = Category::query()
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get([
+                'id',
+                'name',
+            ]);
 
         return view('items.create', compact('categories'));
     }
@@ -78,24 +139,37 @@ class ItemController extends Controller
     /**
      * Menyimpan barang baru.
      */
-    public function store(StoreItemRequest $request): RedirectResponse
-    {
+    public function store(
+        StoreItemRequest $request
+    ): RedirectResponse {
         $validated = $request->validated();
 
-        Item::create([
+        $item = Item::create([
             'category_id' => $validated['category_id'],
             'code' => $validated['code'],
             'name' => $validated['name'],
             'unit' => $validated['unit'],
-            'purchase_price' => $validated['purchase_price'],
+            'purchase_price' =>
+                $validated['purchase_price'],
             'stock' => 0,
-            'minimum_stock' => $validated['minimum_stock'],
-            'description' => $validated['description'] ?? null,
+            'minimum_stock' =>
+                $validated['minimum_stock'],
+            'description' =>
+                $validated['description'] ?? null,
         ]);
+
+        $item->load('category:id,name');
+
+        $mailSent = $this
+            ->sendItemCreatedNotification($item);
+
+        $message = $mailSent
+            ? 'Barang berhasil ditambahkan.'
+            : 'Barang berhasil ditambahkan, tetapi email notifikasi gagal dikirim.';
 
         return redirect()
             ->route('items.index')
-            ->with('success', 'Barang berhasil ditambahkan.');
+            ->with('success', $message);
     }
 
     /**
@@ -105,9 +179,15 @@ class ItemController extends Controller
     {
         $categories = Category::query()
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get([
+                'id',
+                'name',
+            ]);
 
-        return view('items.edit', compact('item', 'categories'));
+        return view('items.edit', compact(
+            'item',
+            'categories'
+        ));
     }
 
     /**
@@ -121,7 +201,10 @@ class ItemController extends Controller
 
         return redirect()
             ->route('items.index')
-            ->with('success', 'Barang berhasil diperbarui.');
+            ->with(
+                'success',
+                'Barang berhasil diperbarui.'
+            );
     }
 
     /**
@@ -129,7 +212,8 @@ class ItemController extends Controller
      */
     public function destroy(Item $item): RedirectResponse
     {
-        $hasTransactionHistory = $item->receiptDetails()->exists()
+        $hasTransactionHistory =
+            $item->receiptDetails()->exists()
             || $item->issueDetails()->exists()
             || $item->stockOpnames()->exists();
 
@@ -142,7 +226,7 @@ class ItemController extends Controller
                 );
         }
 
-        if ($item->stock > 0) {
+        if ((int) $item->stock > 0) {
             return redirect()
                 ->route('items.index')
                 ->with(
@@ -155,6 +239,58 @@ class ItemController extends Controller
 
         return redirect()
             ->route('items.index')
-            ->with('success', 'Barang berhasil dihapus.');
+            ->with(
+                'success',
+                'Barang berhasil dihapus.'
+            );
+    }
+
+    /**
+     * Mengirim notifikasi email barang baru.
+     */
+    private function sendItemCreatedNotification(
+        Item $item
+    ): bool {
+        try {
+            $recipients = $this
+                ->getNotificationRecipients();
+
+            Notification::send(
+                $recipients,
+                new ItemCreatedNotification(
+                    $item,
+                    auth()->user()->name
+                )
+            );
+
+            return true;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
+    }
+
+    /**
+     * Mendapatkan kepala gudang dan pengguna pembuat data.
+     */
+    private function getNotificationRecipients()
+    {
+        return User::query()
+            ->whereNotNull('email')
+            ->where(
+                function ($query): void {
+                    $query
+                        ->where(
+                            'role',
+                            'kepala_gudang'
+                        )
+                        ->orWhere(
+                            'id',
+                            auth()->id()
+                        );
+                }
+            )
+            ->get();
     }
 }

@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Requests\GoodsIssue\StoreGoodsIssueRequest;
 use App\Models\GoodsIssue;
 use App\Models\Item;
+use App\Models\User;
+use App\Notifications\GoodsIssueCreatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class GoodsIssueController extends Controller
 {
@@ -27,34 +31,47 @@ class GoodsIssueController extends Controller
             ])
             ->withCount('details')
             ->withSum('details', 'quantity')
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query
-                        ->where(
-                            'issue_number',
-                            'like',
-                            '%' . $search . '%'
-                        )
-                        ->orWhere(
-                            'destination',
-                            'like',
-                            '%' . $search . '%'
-                        )
-                        ->orWhereHas(
-                            'user',
-                            function ($userQuery) use ($search) {
-                                $userQuery->where(
-                                    'name',
+            ->when(
+                $search !== '',
+                function ($query) use ($search): void {
+                    $query->where(
+                        function ($query) use ($search): void {
+                            $query
+                                ->where(
+                                    'issue_number',
                                     'like',
                                     '%' . $search . '%'
+                                )
+                                ->orWhere(
+                                    'destination',
+                                    'like',
+                                    '%' . $search . '%'
+                                )
+                                ->orWhereHas(
+                                    'user',
+                                    function ($userQuery) use (
+                                        $search
+                                    ): void {
+                                        $userQuery->where(
+                                            'name',
+                                            'like',
+                                            '%' . $search . '%'
+                                        );
+                                    }
                                 );
-                            }
-                        );
-                });
-            })
-            ->when($date, function ($query) use ($date) {
-                $query->whereDate('issued_at', $date);
-            })
+                        }
+                    );
+                }
+            )
+            ->when(
+                $date,
+                function ($query) use ($date): void {
+                    $query->whereDate(
+                        'issued_at',
+                        $date
+                    );
+                }
+            )
             ->orderByDesc('issued_at')
             ->orderByDesc('id')
             ->paginate(10)
@@ -85,7 +102,8 @@ class GoodsIssueController extends Controller
             ]);
 
         $hasAvailableItems = $items->contains(
-            fn (Item $item): bool => (int) $item->stock > 0
+            fn (Item $item): bool =>
+                (int) $item->stock > 0
         );
 
         return view('goods_issues.create', compact(
@@ -102,49 +120,80 @@ class GoodsIssueController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
-        $issue = DB::transaction(function () use ($validated) {
-            $issue = GoodsIssue::create([
-                'issue_number' => $this->generateIssueNumber(),
-                'user_id' => auth()->id(),
-                'destination' => $validated['destination'],
-                'issued_at' => $validated['issued_at'],
-                'note' => $validated['note'] ?? null,
-            ]);
-
-            foreach ($validated['items'] as $index => $detail) {
-                $item = Item::query()
-                    ->lockForUpdate()
-                    ->findOrFail($detail['item_id']);
-
-                $requestedQuantity = (int) $detail['quantity'];
-                $availableStock = (int) $item->stock;
-
-                if ($requestedQuantity > $availableStock) {
-                    throw ValidationException::withMessages([
-                        "items.$index.quantity" =>
-                            "Stok {$item->name} hanya tersedia "
-                            . "{$availableStock} {$item->unit}.",
-                    ]);
-                }
-
-                $issue->details()->create([
-                    'item_id' => $item->id,
-                    'quantity' => $requestedQuantity,
+        $issue = DB::transaction(
+            function () use ($validated): GoodsIssue {
+                $issue = GoodsIssue::create([
+                    'issue_number' =>
+                        $this->generateIssueNumber(),
+                    'user_id' => auth()->id(),
+                    'destination' =>
+                        $validated['destination'],
+                    'issued_at' =>
+                        $validated['issued_at'],
+                    'note' =>
+                        $validated['note'] ?? null,
                 ]);
 
-                $item->stock = $availableStock - $requestedQuantity;
-                $item->save();
-            }
+                foreach (
+                    $validated['items'] as $index => $detail
+                ) {
+                    $item = Item::query()
+                        ->lockForUpdate()
+                        ->findOrFail($detail['item_id']);
 
-            return $issue;
-        }, 3);
+                    $requestedQuantity =
+                        (int) $detail['quantity'];
+
+                    $availableStock =
+                        (int) $item->stock;
+
+                    if (
+                        $requestedQuantity
+                        > $availableStock
+                    ) {
+                        throw ValidationException::withMessages([
+                            "items.$index.quantity" =>
+                                "Stok {$item->name} hanya tersedia "
+                                . "{$availableStock} {$item->unit}.",
+                        ]);
+                    }
+
+                    $issue->details()->create([
+                        'item_id' => $item->id,
+                        'quantity' =>
+                            $requestedQuantity,
+                    ]);
+
+                    $item->stock =
+                        $availableStock
+                        - $requestedQuantity;
+
+                    $item->save();
+                }
+
+                return $issue;
+            },
+            3
+        );
+
+        $issue->load([
+            'user:id,name',
+            'details',
+        ]);
+
+        $mailSent = $this
+            ->sendGoodsIssueNotification($issue);
+
+        $message = $mailSent
+            ? 'Transaksi barang keluar berhasil disimpan.'
+            : 'Transaksi barang keluar berhasil disimpan, tetapi email notifikasi gagal dikirim.';
 
         return redirect()
-            ->route('goods-issues.show', $issue)
-            ->with(
-                'success',
-                'Transaksi barang keluar berhasil disimpan.'
-            );
+            ->route(
+                'goods-issues.show',
+                $issue
+            )
+            ->with('success', $message);
     }
 
     /**
@@ -157,7 +206,9 @@ class GoodsIssueController extends Controller
             'details.item.category',
         ]);
 
-        $totalQuantity = $goodsIssue->details->sum('quantity');
+        $totalQuantity = $goodsIssue
+            ->details
+            ->sum('quantity');
 
         return view('goods_issues.show', compact(
             'goodsIssue',
@@ -166,7 +217,7 @@ class GoodsIssueController extends Controller
     }
 
     /**
-     * Membuat nomor transaksi barang keluar secara otomatis.
+     * Membuat nomor transaksi barang keluar.
      */
     private function generateIssueNumber(): string
     {
@@ -174,7 +225,11 @@ class GoodsIssueController extends Controller
         $prefix = 'BK-' . $date . '-';
 
         $lastNumber = GoodsIssue::query()
-            ->where('issue_number', 'like', $prefix . '%')
+            ->where(
+                'issue_number',
+                'like',
+                $prefix . '%'
+            )
             ->lockForUpdate()
             ->orderByDesc('issue_number')
             ->value('issue_number');
@@ -189,5 +244,53 @@ class GoodsIssueController extends Controller
             '0',
             STR_PAD_LEFT
         );
+    }
+
+    /**
+     * Mengirim notifikasi email barang keluar.
+     */
+    private function sendGoodsIssueNotification(
+        GoodsIssue $issue
+    ): bool {
+        try {
+            $recipients = $this
+                ->getNotificationRecipients();
+
+            Notification::send(
+                $recipients,
+                new GoodsIssueCreatedNotification(
+                    $issue
+                )
+            );
+
+            return true;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
+    }
+
+    /**
+     * Mendapatkan kepala gudang dan pengguna pembuat transaksi.
+     */
+    private function getNotificationRecipients()
+    {
+        return User::query()
+            ->whereNotNull('email')
+            ->where(
+                function ($query): void {
+                    $query
+                        ->where(
+                            'role',
+                            'kepala_gudang'
+                        )
+                        ->orWhere(
+                            'id',
+                            auth()->id()
+                        );
+                }
+            )
+            ->get();
     }
 }
