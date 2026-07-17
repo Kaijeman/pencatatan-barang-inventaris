@@ -11,6 +11,7 @@ use App\Notifications\GoodsReceiptCreatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
 use Throwable;
@@ -146,8 +147,13 @@ class GoodsReceiptController extends Controller
                 foreach ($validated['items'] as $detail) {
                     $item = Item::query()
                         ->lockForUpdate()
-                        ->findOrFail($detail['item_id']);
+                        ->findOrFail(
+                            $detail['item_id']
+                        );
 
+                    /**
+                     * Menyimpan detail barang masuk.
+                     */
                     $receipt->details()->create([
                         'item_id' => $item->id,
                         'quantity' =>
@@ -156,6 +162,9 @@ class GoodsReceiptController extends Controller
                             $detail['purchase_price'],
                     ]);
 
+                    /**
+                     * Menambah stok dan memperbarui harga beli.
+                     */
                     $item->stock +=
                         (int) $detail['quantity'];
 
@@ -170,25 +179,41 @@ class GoodsReceiptController extends Controller
             3
         );
 
+        /**
+         * Memuat relasi yang digunakan dalam notifikasi.
+         */
         $receipt->load([
             'supplier:id,name',
             'user:id,name',
             'details',
         ]);
 
-        $mailSent = $this
-            ->sendGoodsReceiptNotification($receipt);
+        $notificationQueued =
+            $this->queueGoodsReceiptNotification(
+                $receipt
+            );
 
-        $message = $mailSent
-            ? 'Transaksi barang masuk berhasil disimpan.'
-            : 'Transaksi barang masuk berhasil disimpan, tetapi email notifikasi gagal dikirim.';
+        if ($notificationQueued) {
+            return redirect()
+                ->route(
+                    'goods-receipts.show',
+                    $receipt
+                )
+                ->with(
+                    'success',
+                    'Transaksi barang masuk berhasil disimpan.'
+                );
+        }
 
         return redirect()
             ->route(
                 'goods-receipts.show',
                 $receipt
             )
-            ->with('success', $message);
+            ->with(
+                'error',
+                'Transaksi barang masuk berhasil disimpan, tetapi notifikasi email gagal dimasukkan ke antrean.'
+            );
     }
 
     /**
@@ -254,15 +279,32 @@ class GoodsReceiptController extends Controller
     }
 
     /**
-     * Mengirim notifikasi email barang masuk.
+     * Memasukkan notifikasi barang masuk ke antrean.
      */
-    private function sendGoodsReceiptNotification(
+    private function queueGoodsReceiptNotification(
         GoodsReceipt $receipt
     ): bool {
         try {
-            $recipients = $this
-                ->getNotificationRecipients();
+            $recipients =
+                $this->getNotificationRecipients();
 
+            /**
+             * Menghentikan proses jika tidak ada penerima.
+             */
+            if ($recipients->isEmpty()) {
+                Log::warning(
+                    'Notifikasi barang masuk tidak memiliki penerima.',
+                    [
+                        'receipt_id' => $receipt->id,
+                    ]
+                );
+
+                return false;
+            }
+
+            /**
+             * Memasukkan notifikasi ke database queue.
+             */
             Notification::send(
                 $recipients,
                 new GoodsReceiptCreatedNotification(
@@ -272,6 +314,17 @@ class GoodsReceiptController extends Controller
 
             return true;
         } catch (Throwable $exception) {
+            Log::error(
+                'Notifikasi barang masuk gagal dimasukkan ke antrean.',
+                [
+                    'receipt_id' => $receipt->id,
+                    'exception_class' =>
+                        $exception::class,
+                    'message' =>
+                        $exception->getMessage(),
+                ]
+            );
+
             report($exception);
 
             return false;
@@ -279,12 +332,14 @@ class GoodsReceiptController extends Controller
     }
 
     /**
-     * Mendapatkan kepala gudang dan pengguna pembuat transaksi.
+     * Mendapatkan kepala gudang dan pembuat transaksi.
      */
     private function getNotificationRecipients()
     {
         return User::query()
             ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->where('email', 'not like', '%.test')
             ->where(
                 function ($query): void {
                     $query
@@ -298,6 +353,8 @@ class GoodsReceiptController extends Controller
                         );
                 }
             )
-            ->get();
+            ->get()
+            ->unique('email')
+            ->values();
     }
 }

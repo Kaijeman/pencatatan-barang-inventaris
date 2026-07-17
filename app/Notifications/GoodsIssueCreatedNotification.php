@@ -4,12 +4,23 @@ namespace App\Notifications;
 
 use App\Models\GoodsIssue;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class GoodsIssueCreatedNotification extends Notification
+class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+
+    /**
+     * Jumlah maksimal percobaan pengiriman notifikasi.
+     */
+    public int $tries = 3;
+
+    /**
+     * Batas waktu pemrosesan notifikasi dalam detik.
+     */
+    public int $timeout = 60;
 
     /**
      * Membuat instance notifikasi barang keluar.
@@ -17,6 +28,10 @@ class GoodsIssueCreatedNotification extends Notification
     public function __construct(
         public GoodsIssue $goodsIssue
     ) {
+        /**
+         * Memastikan notifikasi diproses setelah transaksi selesai.
+         */
+        $this->afterCommit();
     }
 
     /**
@@ -30,10 +45,38 @@ class GoodsIssueCreatedNotification extends Notification
     }
 
     /**
+     * Menentukan nama queue untuk setiap channel.
+     *
+     * @return array<string, string>
+     */
+    public function viaQueues(): array
+    {
+        return [
+            'mail' => 'emails',
+        ];
+    }
+
+    /**
+     * Menentukan jeda sebelum percobaan ulang.
+     */
+    public function backoff(): int
+    {
+        return 30;
+    }
+
+    /**
      * Membuat isi notifikasi email barang keluar.
      */
     public function toMail(object $notifiable): MailMessage
     {
+        /**
+         * Memuat relasi yang diperlukan dalam email.
+         */
+        $this->goodsIssue->loadMissing([
+            'user:id,name',
+            'details',
+        ]);
+
         $totalQuantity = (int) $this->goodsIssue
             ->details
             ->sum('quantity');
@@ -96,7 +139,8 @@ class GoodsIssueCreatedNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'goods_issue_id' => $this->goodsIssue->id,
+            'goods_issue_id' =>
+                $this->goodsIssue->id,
             'issue_number' =>
                 $this->goodsIssue->issue_number,
             'destination' =>

@@ -4,12 +4,23 @@ namespace App\Notifications;
 
 use App\Models\GoodsReceipt;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class GoodsReceiptCreatedNotification extends Notification
+class GoodsReceiptCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+
+    /**
+     * Jumlah maksimal percobaan pengiriman notifikasi.
+     */
+    public int $tries = 3;
+
+    /**
+     * Batas waktu pemrosesan notifikasi dalam detik.
+     */
+    public int $timeout = 60;
 
     /**
      * Membuat instance notifikasi barang masuk.
@@ -17,6 +28,10 @@ class GoodsReceiptCreatedNotification extends Notification
     public function __construct(
         public GoodsReceipt $goodsReceipt
     ) {
+        /**
+         * Memastikan notifikasi diproses setelah transaksi selesai.
+         */
+        $this->afterCommit();
     }
 
     /**
@@ -30,10 +45,39 @@ class GoodsReceiptCreatedNotification extends Notification
     }
 
     /**
+     * Menentukan nama queue untuk setiap channel.
+     *
+     * @return array<string, string>
+     */
+    public function viaQueues(): array
+    {
+        return [
+            'mail' => 'emails',
+        ];
+    }
+
+    /**
+     * Menentukan jeda sebelum percobaan ulang.
+     */
+    public function backoff(): int
+    {
+        return 30;
+    }
+
+    /**
      * Membuat isi notifikasi email barang masuk.
      */
     public function toMail(object $notifiable): MailMessage
     {
+        /**
+         * Memuat relasi yang diperlukan dalam email.
+         */
+        $this->goodsReceipt->loadMissing([
+            'supplier:id,name',
+            'user:id,name',
+            'details',
+        ]);
+
         $totalQuantity = (int) $this->goodsReceipt
             ->details
             ->sum('quantity');
@@ -114,7 +158,8 @@ class GoodsReceiptCreatedNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'goods_receipt_id' => $this->goodsReceipt->id,
+            'goods_receipt_id' =>
+                $this->goodsReceipt->id,
             'receipt_number' =>
                 $this->goodsReceipt->receipt_number,
             'supplier_name' =>

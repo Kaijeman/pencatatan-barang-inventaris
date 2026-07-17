@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\ItemCreatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
 use Throwable;
@@ -133,7 +134,9 @@ class ItemController extends Controller
                 'name',
             ]);
 
-        return view('items.create', compact('categories'));
+        return view('items.create', compact(
+            'categories'
+        ));
     }
 
     /**
@@ -158,18 +161,29 @@ class ItemController extends Controller
                 $validated['description'] ?? null,
         ]);
 
+        /**
+         * Memuat kategori yang digunakan oleh notifikasi.
+         */
         $item->load('category:id,name');
 
-        $mailSent = $this
-            ->sendItemCreatedNotification($item);
+        $notificationQueued =
+            $this->queueItemCreatedNotification($item);
 
-        $message = $mailSent
-            ? 'Barang berhasil ditambahkan.'
-            : 'Barang berhasil ditambahkan, tetapi email notifikasi gagal dikirim.';
+        if ($notificationQueued) {
+            return redirect()
+                ->route('items.index')
+                ->with(
+                    'success',
+                    'Barang berhasil ditambahkan.'
+                );
+        }
 
         return redirect()
             ->route('items.index')
-            ->with('success', $message);
+            ->with(
+                'error',
+                'Barang berhasil ditambahkan, tetapi notifikasi email gagal dimasukkan ke antrean.'
+            );
     }
 
     /**
@@ -212,6 +226,9 @@ class ItemController extends Controller
      */
     public function destroy(Item $item): RedirectResponse
     {
+        /**
+         * Memeriksa seluruh riwayat transaksi barang.
+         */
         $hasTransactionHistory =
             $item->receiptDetails()->exists()
             || $item->issueDetails()->exists()
@@ -226,6 +243,9 @@ class ItemController extends Controller
                 );
         }
 
+        /**
+         * Mencegah barang dengan stok tersisa dihapus.
+         */
         if ((int) $item->stock > 0) {
             return redirect()
                 ->route('items.index')
@@ -246,15 +266,32 @@ class ItemController extends Controller
     }
 
     /**
-     * Mengirim notifikasi email barang baru.
+     * Memasukkan notifikasi barang baru ke antrean.
      */
-    private function sendItemCreatedNotification(
+    private function queueItemCreatedNotification(
         Item $item
     ): bool {
         try {
-            $recipients = $this
-                ->getNotificationRecipients();
+            $recipients =
+                $this->getNotificationRecipients();
 
+            /**
+             * Menghentikan proses jika tidak ada penerima.
+             */
+            if ($recipients->isEmpty()) {
+                Log::warning(
+                    'Notifikasi barang baru tidak memiliki penerima.',
+                    [
+                        'item_id' => $item->id,
+                    ]
+                );
+
+                return false;
+            }
+
+            /**
+             * Memasukkan notifikasi ke database queue.
+             */
             Notification::send(
                 $recipients,
                 new ItemCreatedNotification(
@@ -265,6 +302,17 @@ class ItemController extends Controller
 
             return true;
         } catch (Throwable $exception) {
+            Log::error(
+                'Notifikasi barang baru gagal dimasukkan ke antrean.',
+                [
+                    'item_id' => $item->id,
+                    'exception_class' =>
+                        $exception::class,
+                    'message' =>
+                        $exception->getMessage(),
+                ]
+            );
+
             report($exception);
 
             return false;
@@ -272,12 +320,14 @@ class ItemController extends Controller
     }
 
     /**
-     * Mendapatkan kepala gudang dan pengguna pembuat data.
+     * Mendapatkan kepala gudang dan pembuat data.
      */
     private function getNotificationRecipients()
     {
         return User::query()
             ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->where('email', 'not like', '%.test')
             ->where(
                 function ($query): void {
                     $query
@@ -291,6 +341,8 @@ class ItemController extends Controller
                         );
                 }
             )
-            ->get();
+            ->get()
+            ->unique('email')
+            ->values();
     }
 }

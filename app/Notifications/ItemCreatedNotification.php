@@ -4,12 +4,23 @@ namespace App\Notifications;
 
 use App\Models\Item;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ItemCreatedNotification extends Notification
+class ItemCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+
+    /**
+     * Jumlah maksimal percobaan pengiriman notifikasi.
+     */
+    public int $tries = 3;
+
+    /**
+     * Batas waktu pemrosesan notifikasi dalam detik.
+     */
+    public int $timeout = 60;
 
     /**
      * Membuat instance notifikasi barang baru.
@@ -18,6 +29,10 @@ class ItemCreatedNotification extends Notification
         public Item $item,
         public string $actorName
     ) {
+        /**
+         * Memastikan notifikasi diproses setelah transaksi selesai.
+         */
+        $this->afterCommit();
     }
 
     /**
@@ -28,6 +43,26 @@ class ItemCreatedNotification extends Notification
     public function via(object $notifiable): array
     {
         return ['mail'];
+    }
+
+    /**
+     * Menentukan nama queue untuk setiap channel.
+     *
+     * @return array<string, string>
+     */
+    public function viaQueues(): array
+    {
+        return [
+            'mail' => 'emails',
+        ];
+    }
+
+    /**
+     * Menentukan jeda sebelum percobaan ulang.
+     */
+    public function backoff(): int
+    {
+        return 30;
     }
 
     /**
@@ -60,7 +95,9 @@ class ItemCreatedNotification extends Notification
             )
             ->line(
                 'Stok Minimum: '
-                . number_format((int) $this->item->minimum_stock)
+                . number_format(
+                    (int) $this->item->minimum_stock
+                )
                 . ' '
                 . $this->item->unit
             )

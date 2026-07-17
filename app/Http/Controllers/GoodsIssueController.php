@@ -10,6 +10,7 @@ use App\Notifications\GoodsIssueCreatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -101,6 +102,9 @@ class GoodsIssueController extends Controller
                 'stock',
             ]);
 
+        /**
+         * Memeriksa ketersediaan barang yang memiliki stok.
+         */
         $hasAvailableItems = $items->contains(
             fn (Item $item): bool =>
                 (int) $item->stock > 0
@@ -139,7 +143,9 @@ class GoodsIssueController extends Controller
                 ) {
                     $item = Item::query()
                         ->lockForUpdate()
-                        ->findOrFail($detail['item_id']);
+                        ->findOrFail(
+                            $detail['item_id']
+                        );
 
                     $requestedQuantity =
                         (int) $detail['quantity'];
@@ -147,6 +153,9 @@ class GoodsIssueController extends Controller
                     $availableStock =
                         (int) $item->stock;
 
+                    /**
+                     * Mencegah pengeluaran melebihi stok.
+                     */
                     if (
                         $requestedQuantity
                         > $availableStock
@@ -158,12 +167,18 @@ class GoodsIssueController extends Controller
                         ]);
                     }
 
+                    /**
+                     * Menyimpan detail barang keluar.
+                     */
                     $issue->details()->create([
                         'item_id' => $item->id,
                         'quantity' =>
                             $requestedQuantity,
                     ]);
 
+                    /**
+                     * Mengurangi stok barang.
+                     */
                     $item->stock =
                         $availableStock
                         - $requestedQuantity;
@@ -176,31 +191,48 @@ class GoodsIssueController extends Controller
             3
         );
 
+        /**
+         * Memuat relasi yang digunakan dalam notifikasi.
+         */
         $issue->load([
             'user:id,name',
             'details',
         ]);
 
-        $mailSent = $this
-            ->sendGoodsIssueNotification($issue);
+        $notificationQueued =
+            $this->queueGoodsIssueNotification(
+                $issue
+            );
 
-        $message = $mailSent
-            ? 'Transaksi barang keluar berhasil disimpan.'
-            : 'Transaksi barang keluar berhasil disimpan, tetapi email notifikasi gagal dikirim.';
+        if ($notificationQueued) {
+            return redirect()
+                ->route(
+                    'goods-issues.show',
+                    $issue
+                )
+                ->with(
+                    'success',
+                    'Transaksi barang keluar berhasil disimpan.'
+                );
+        }
 
         return redirect()
             ->route(
                 'goods-issues.show',
                 $issue
             )
-            ->with('success', $message);
+            ->with(
+                'error',
+                'Transaksi barang keluar berhasil disimpan, tetapi notifikasi email gagal dimasukkan ke antrean.'
+            );
     }
 
     /**
      * Menampilkan detail transaksi barang keluar.
      */
-    public function show(GoodsIssue $goodsIssue): View
-    {
+    public function show(
+        GoodsIssue $goodsIssue
+    ): View {
         $goodsIssue->load([
             'user',
             'details.item.category',
@@ -247,15 +279,32 @@ class GoodsIssueController extends Controller
     }
 
     /**
-     * Mengirim notifikasi email barang keluar.
+     * Memasukkan notifikasi barang keluar ke antrean.
      */
-    private function sendGoodsIssueNotification(
+    private function queueGoodsIssueNotification(
         GoodsIssue $issue
     ): bool {
         try {
-            $recipients = $this
-                ->getNotificationRecipients();
+            $recipients =
+                $this->getNotificationRecipients();
 
+            /**
+             * Menghentikan proses jika tidak ada penerima.
+             */
+            if ($recipients->isEmpty()) {
+                Log::warning(
+                    'Notifikasi barang keluar tidak memiliki penerima.',
+                    [
+                        'issue_id' => $issue->id,
+                    ]
+                );
+
+                return false;
+            }
+
+            /**
+             * Memasukkan notifikasi ke database queue.
+             */
             Notification::send(
                 $recipients,
                 new GoodsIssueCreatedNotification(
@@ -265,6 +314,17 @@ class GoodsIssueController extends Controller
 
             return true;
         } catch (Throwable $exception) {
+            Log::error(
+                'Notifikasi barang keluar gagal dimasukkan ke antrean.',
+                [
+                    'issue_id' => $issue->id,
+                    'exception_class' =>
+                        $exception::class,
+                    'message' =>
+                        $exception->getMessage(),
+                ]
+            );
+
             report($exception);
 
             return false;
@@ -272,12 +332,14 @@ class GoodsIssueController extends Controller
     }
 
     /**
-     * Mendapatkan kepala gudang dan pengguna pembuat transaksi.
+     * Mendapatkan kepala gudang dan pembuat transaksi.
      */
     private function getNotificationRecipients()
     {
         return User::query()
             ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->where('email', 'not like', '%.test')
             ->where(
                 function ($query): void {
                     $query
@@ -291,6 +353,8 @@ class GoodsIssueController extends Controller
                         );
                 }
             )
-            ->get();
+            ->get()
+            ->unique('email')
+            ->values();
     }
 }
