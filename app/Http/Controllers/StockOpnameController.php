@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\StockOpname;
 use App\Models\User;
 use App\Notifications\StockAlertNotification;
+use App\Notifications\StockOpnameDifferenceNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,8 +30,9 @@ class StockOpnameController extends Controller
 
         $date = $request->input('date');
 
-        $differenceStatus =
-            $request->input('difference_status');
+        $differenceStatus = $request->input(
+            'difference_status'
+        );
 
         $stockOpnames = StockOpname::query()
             ->with([
@@ -167,15 +169,13 @@ class StockOpnameController extends Controller
                         $validated['item_id']
                     );
 
-                $systemStock =
-                    (int) $item->stock;
+                $systemStock = (int) $item->stock;
 
-                $physicalStock =
-                    (int) $validated['physical_stock'];
+                $physicalStock = (int) $validated[
+                    'physical_stock'
+                ];
 
-                $difference =
-                    $physicalStock
-                    - $systemStock;
+                $difference = $physicalStock - $systemStock;
 
                 /**
                  * Mewajibkan catatan apabila terdapat selisih.
@@ -203,7 +203,7 @@ class StockOpnameController extends Controller
                 ]);
 
                 /**
-                 * Menyesuaikan stok berdasarkan hasil fisik.
+                 * Menyesuaikan stok berdasarkan stok fisik.
                  */
                 $item->stock = $physicalStock;
                 $item->save();
@@ -214,15 +214,21 @@ class StockOpnameController extends Controller
         );
 
         /**
-         * Memuat relasi untuk tampilan dan notifikasi.
+         * Memuat relasi untuk notifikasi dan tampilan.
          */
         $stockOpname->load([
             'item.category',
             'user:id,name',
         ]);
 
-        $stockAlerts =
-            $this->buildStockAlerts($stockOpname);
+        $differenceNotificationQueued =
+            $this->queueDifferenceNotification(
+                $stockOpname
+            );
+
+        $stockAlerts = $this->buildStockAlerts(
+            $stockOpname
+        );
 
         $stockAlertQueued =
             $this->queueStockAlertNotification(
@@ -230,9 +236,12 @@ class StockOpnameController extends Controller
                 $stockOpname
             );
 
+        /**
+         * Transaksi tetap berhasil walaupun notifikasi gagal.
+         */
         if (
-            $stockAlerts !== []
-            && ! $stockAlertQueued
+            ! $differenceNotificationQueued
+            || ! $stockAlertQueued
         ) {
             return redirect()
                 ->route(
@@ -241,16 +250,21 @@ class StockOpnameController extends Controller
                 )
                 ->with(
                     'error',
-                    'Stock opname berhasil disimpan, tetapi peringatan stok gagal dimasukkan ke antrean.'
+                    'Stock opname berhasil disimpan, tetapi terdapat notifikasi email yang gagal diproses.'
                 );
         }
 
         $message =
             'Stock opname berhasil disimpan dan stok barang telah disesuaikan.';
 
+        if ((int) $stockOpname->difference !== 0) {
+            $message .=
+                ' Notifikasi selisih stok telah dikirim.';
+        }
+
         if ($stockAlerts !== []) {
             $message .=
-                ' Peringatan stok juga telah dimasukkan ke antrean email.';
+                ' Peringatan stok menipis atau habis.';
         }
 
         return redirect()
@@ -275,6 +289,104 @@ class StockOpnameController extends Controller
         return view('stock_opnames.show', compact(
             'stockOpname'
         ));
+    }
+
+    /**
+     * Memasukkan notifikasi selisih stock opname.
+     */
+    private function queueDifferenceNotification(
+        StockOpname $stockOpname
+    ): bool {
+        /**
+         * Tidak mengirim email jika stok fisik sesuai.
+         */
+        if ((int) $stockOpname->difference === 0) {
+            return true;
+        }
+
+        try {
+            $recipients =
+                $this->getDifferenceNotificationRecipients(
+                    $stockOpname
+                );
+
+            if ($recipients->isEmpty()) {
+                Log::warning(
+                    'Notifikasi selisih stock opname tidak memiliki penerima.',
+                    [
+                        'stock_opname_id' =>
+                            $stockOpname->id,
+                    ]
+                );
+
+                return false;
+            }
+
+            $opnameData = [
+                'item_code' =>
+                    $stockOpname->item->code,
+
+                'item_name' =>
+                    $stockOpname->item->name,
+
+                'category_name' =>
+                    $stockOpname->item->category->name,
+
+                'unit' =>
+                    $stockOpname->item->unit,
+
+                'system_stock' =>
+                    (int) $stockOpname->system_stock,
+
+                'physical_stock' =>
+                    (int) $stockOpname->physical_stock,
+
+                'difference' =>
+                    (int) $stockOpname->difference,
+
+                'opname_date' =>
+                    $stockOpname
+                        ->opname_date
+                        ->format('d/m/Y'),
+
+                'actor_name' =>
+                    $stockOpname->user->name,
+
+                'note' =>
+                    $stockOpname->note,
+            ];
+
+            /**
+             * Memasukkan notifikasi ke database queue.
+             */
+            Notification::send(
+                $recipients,
+                new StockOpnameDifferenceNotification(
+                    $stockOpname->id,
+                    $opnameData
+                )
+            );
+
+            return true;
+        } catch (Throwable $exception) {
+            Log::error(
+                'Notifikasi selisih stock opname gagal dimasukkan ke antrean.',
+                [
+                    'stock_opname_id' =>
+                        $stockOpname->id,
+
+                    'exception_class' =>
+                        $exception::class,
+
+                    'message' =>
+                        $exception->getMessage(),
+                ]
+            );
+
+            report($exception);
+
+            return false;
+        }
     }
 
     /**
@@ -306,7 +418,7 @@ class StockOpnameController extends Controller
             );
 
         /**
-         * Tidak membuat peringatan jika status tidak memburuk.
+         * Tidak memperingatkan jika status tidak memburuk.
          */
         if (
             ! $this->shouldSendStockAlert(
@@ -361,6 +473,9 @@ class StockOpnameController extends Controller
                 return false;
             }
 
+            /**
+             * Memasukkan peringatan stok ke antrean.
+             */
             Notification::send(
                 $recipients,
                 new StockAlertNotification(
@@ -378,8 +493,10 @@ class StockOpnameController extends Controller
                 [
                     'stock_opname_id' =>
                         $stockOpname->id,
+
                     'exception_class' =>
                         $exception::class,
+
                     'message' =>
                         $exception->getMessage(),
                 ]
@@ -389,6 +506,36 @@ class StockOpnameController extends Controller
 
             return false;
         }
+    }
+
+    /**
+     * Mendapatkan kepala gudang dan petugas opname.
+     */
+    private function getDifferenceNotificationRecipients(
+        StockOpname $stockOpname
+    ) {
+        return User::query()
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->where('email', 'not like', '%.test')
+            ->where(
+                function ($query) use (
+                    $stockOpname
+                ): void {
+                    $query
+                        ->where(
+                            'role',
+                            'kepala_gudang'
+                        )
+                        ->orWhere(
+                            'id',
+                            $stockOpname->user_id
+                        );
+                }
+            )
+            ->get()
+            ->unique('email')
+            ->values();
     }
 
     /**

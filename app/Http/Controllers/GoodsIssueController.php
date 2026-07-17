@@ -295,7 +295,7 @@ class GoodsIssueController extends Controller
             )
             ->with(
                 'error',
-                'Transaksi barang keluar berhasil disimpan, tetapi terdapat notifikasi yang gagal dimasukkan ke antrean.'
+                'Transaksi barang keluar berhasil disimpan, tetapi terdapat notifikasi email yang gagal diproses.'
             );
     }
 

@@ -182,7 +182,7 @@ class ItemController extends Controller
             ->route('items.index')
             ->with(
                 'error',
-                'Barang berhasil ditambahkan, tetapi notifikasi email gagal dimasukkan ke antrean.'
+                'Barang berhasil ditambahkan, tetapi notifikasi email gagal diproses.'
             );
     }
 

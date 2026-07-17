@@ -107,7 +107,7 @@ class ItemCreatedNotification extends Notification implements ShouldQueue
                 route('items.index')
             )
             ->line(
-                'Email ini dikirim otomatis oleh sistem inventaris gudang.'
+                'Email ini dikirim otomatis oleh sistem.'
             );
     }
 

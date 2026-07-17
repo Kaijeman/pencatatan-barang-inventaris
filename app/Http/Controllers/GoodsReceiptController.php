@@ -212,7 +212,7 @@ class GoodsReceiptController extends Controller
             )
             ->with(
                 'error',
-                'Transaksi barang masuk berhasil disimpan, tetapi notifikasi email gagal dimasukkan ke antrean.'
+                'Transaksi barang masuk berhasil disimpan, tetapi notifikasi email gagal diproses.'
             );
     }
 

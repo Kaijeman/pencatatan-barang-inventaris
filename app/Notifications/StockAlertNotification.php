@@ -140,7 +140,7 @@ class StockAlertNotification extends Notification implements ShouldQueue
                 'Segera lakukan pemeriksaan atau pengadaan barang apabila diperlukan.'
             )
             ->line(
-                'Email ini dikirim otomatis oleh sistem inventaris gudang.'
+                'Email ini dikirim otomatis oleh sistem.'
             );
     }
 

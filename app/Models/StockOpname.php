@@ -18,12 +18,15 @@ class StockOpname extends Model
     ];
 
     /**
-     * Mengubah tanggal opname menjadi objek tanggal.
+     * Mengubah atribut model ke tipe data yang sesuai.
      */
     protected function casts(): array
     {
         return [
             'opname_date' => 'date',
+            'system_stock' => 'integer',
+            'physical_stock' => 'integer',
+            'difference' => 'integer',
         ];
     }
 
@@ -36,7 +39,7 @@ class StockOpname extends Model
     }
 
     /**
-     * Mendapatkan pengguna yang mencatat stock opname.
+     * Mendapatkan petugas yang melakukan opname.
      */
     public function user(): BelongsTo
     {

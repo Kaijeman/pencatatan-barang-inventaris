@@ -146,7 +146,7 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
                 )
             )
             ->line(
-                'Email ini dikirim otomatis oleh sistem inventaris gudang.'
+                'Email ini dikirim otomatis oleh sistem.'
             );
     }
 
