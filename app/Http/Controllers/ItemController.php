@@ -6,14 +6,9 @@ use App\Http\Requests\Item\StoreItemRequest;
 use App\Http\Requests\Item\UpdateItemRequest;
 use App\Models\Category;
 use App\Models\Item;
-use App\Models\User;
-use App\Notifications\ItemCreatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\View\View;
-use Throwable;
 
 class ItemController extends Controller
 {
@@ -89,7 +84,7 @@ class ItemController extends Controller
             ->when(
                 $stockStatus === 'out',
                 function ($query): void {
-                    $query->where('stock', 0);
+                    $query->where('stock', '<=', 0);
                 }
             )
             ->when(
@@ -147,7 +142,7 @@ class ItemController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
-        $item = Item::create([
+        Item::create([
             'category_id' => $validated['category_id'],
             'code' => $validated['code'],
             'name' => $validated['name'],
@@ -161,28 +156,11 @@ class ItemController extends Controller
                 $validated['description'] ?? null,
         ]);
 
-        /**
-         * Memuat kategori yang digunakan oleh notifikasi.
-         */
-        $item->load('category:id,name');
-
-        $notificationQueued =
-            $this->queueItemCreatedNotification($item);
-
-        if ($notificationQueued) {
-            return redirect()
-                ->route('items.index')
-                ->with(
-                    'success',
-                    'Barang berhasil ditambahkan.'
-                );
-        }
-
         return redirect()
             ->route('items.index')
             ->with(
-                'error',
-                'Barang berhasil ditambahkan, tetapi notifikasi email gagal diproses.'
+                'success',
+                'Barang berhasil ditambahkan.'
             );
     }
 
@@ -227,7 +205,7 @@ class ItemController extends Controller
     public function destroy(Item $item): RedirectResponse
     {
         /**
-         * Memeriksa seluruh riwayat transaksi barang.
+         * Memeriksa riwayat transaksi barang.
          */
         $hasTransactionHistory =
             $item->receiptDetails()->exists()
@@ -263,86 +241,5 @@ class ItemController extends Controller
                 'success',
                 'Barang berhasil dihapus.'
             );
-    }
-
-    /**
-     * Memasukkan notifikasi barang baru ke antrean.
-     */
-    private function queueItemCreatedNotification(
-        Item $item
-    ): bool {
-        try {
-            $recipients =
-                $this->getNotificationRecipients();
-
-            /**
-             * Menghentikan proses jika tidak ada penerima.
-             */
-            if ($recipients->isEmpty()) {
-                Log::warning(
-                    'Notifikasi barang baru tidak memiliki penerima.',
-                    [
-                        'item_id' => $item->id,
-                    ]
-                );
-
-                return false;
-            }
-
-            /**
-             * Memasukkan notifikasi ke database queue.
-             */
-            Notification::send(
-                $recipients,
-                new ItemCreatedNotification(
-                    $item,
-                    auth()->user()->name
-                )
-            );
-
-            return true;
-        } catch (Throwable $exception) {
-            Log::error(
-                'Notifikasi barang baru gagal dimasukkan ke antrean.',
-                [
-                    'item_id' => $item->id,
-                    'exception_class' =>
-                        $exception::class,
-                    'message' =>
-                        $exception->getMessage(),
-                ]
-            );
-
-            report($exception);
-
-            return false;
-        }
-    }
-
-    /**
-     * Mendapatkan kepala gudang dan pembuat data.
-     */
-    private function getNotificationRecipients()
-    {
-        return User::query()
-            ->whereNotNull('email')
-            ->where('email', '!=', '')
-            ->where('email', 'not like', '%.test')
-            ->where(
-                function ($query): void {
-                    $query
-                        ->where(
-                            'role',
-                            'kepala_gudang'
-                        )
-                        ->orWhere(
-                            'id',
-                            auth()->id()
-                        );
-                }
-            )
-            ->get()
-            ->unique('email')
-            ->values();
     }
 }
