@@ -10,7 +10,7 @@
 
     <nav class="mt-5">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-5 py-3 hover:bg-slate-700">
-            <i class="bi bi-speedometer2"></i>
+            <i class="bi bi-house"></i>
             <span>Dashboard</span>
         </a>
 
