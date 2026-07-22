@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class GoodsIssue extends Model
 {
     protected $fillable = [
-        'issue_number',
         'user_id',
         'destination',
         'issued_at',
@@ -17,7 +16,7 @@ class GoodsIssue extends Model
     ];
 
     /**
-     * Mengubah tanggal pengeluaran menjadi objek tanggal.
+     * Mengubah atribut tanggal ke objek tanggal.
      */
     protected function casts(): array
     {
@@ -35,7 +34,7 @@ class GoodsIssue extends Model
     }
 
     /**
-     * Mendapatkan seluruh detail transaksi barang keluar.
+     * Mendapatkan detail barang keluar.
      */
     public function details(): HasMany
     {

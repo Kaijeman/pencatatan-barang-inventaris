@@ -89,7 +89,7 @@ class StockAlertNotification extends Notification implements ShouldQueue
             );
 
         /**
-         * Menambahkan informasi setiap barang ke dalam email.
+         * Menambahkan informasi setiap barang.
          */
         foreach ($this->alerts as $alert) {
             $statusLabel = $alert['status'] === 'out'
@@ -98,12 +98,7 @@ class StockAlertNotification extends Notification implements ShouldQueue
 
             $mailMessage
                 ->line('----------------------------------------')
-                ->line(
-                    'Barang: '
-                    . $alert['code']
-                    . ' - '
-                    . $alert['name']
-                )
+                ->line('Barang: ' . $alert['name'])
                 ->line('Status: ' . $statusLabel)
                 ->line(
                     'Stok Sebelumnya: '
@@ -130,20 +125,7 @@ class StockAlertNotification extends Notification implements ShouldQueue
                     . $alert['unit']
                 );
         }
-
-        return $mailMessage
-            ->action(
-                'Lihat Laporan Stok',
-                route('reports.stock')
-            )
-            ->line(
-                'Segera lakukan pemeriksaan atau pengadaan barang apabila diperlukan.'
-            )
-            ->line(
-                'Email ini dikirim otomatis oleh sistem.'
-            );
     }
-
     /**
      * Membuat representasi data notifikasi.
      *

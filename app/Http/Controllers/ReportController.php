@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Item;
 use App\Models\GoodsIssue;
 use App\Models\GoodsIssueDetail;
 use App\Models\GoodsReceipt;
 use App\Models\GoodsReceiptDetail;
+use App\Models\Item;
 use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -33,8 +33,14 @@ class ReportController extends Controller
 
         $categories = Category::query()
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get([
+                'id',
+                'name',
+            ]);
 
+        /**
+         * Membuat ringkasan seluruh kondisi stok.
+         */
         $summary = [
             'total_items' => Item::query()->count(),
 
@@ -42,17 +48,24 @@ class ReportController extends Controller
 
             'total_value' => (float) Item::query()
                 ->selectRaw(
-                    'COALESCE(SUM(stock * purchase_price), 0) AS total_value'
+                    'COALESCE(
+                        SUM(stock * purchase_price),
+                        0
+                    ) AS total_value'
                 )
                 ->value('total_value'),
 
             'low_stock_items' => Item::query()
                 ->where('stock', '>', 0)
-                ->whereColumn('stock', '<=', 'minimum_stock')
+                ->whereColumn(
+                    'stock',
+                    '<=',
+                    'minimum_stock'
+                )
                 ->count(),
 
             'out_of_stock_items' => Item::query()
-                ->where('stock', 0)
+                ->where('stock', '<=', 0)
                 ->count(),
         ];
 
@@ -67,8 +80,9 @@ class ReportController extends Controller
     /**
      * Mengekspor laporan stok ke dalam file CSV.
      */
-    public function exportStock(Request $request): StreamedResponse
-    {
+    public function exportStock(
+        Request $request
+    ): StreamedResponse {
         $filters = $this->getStockFilters($request);
 
         $fileName = 'laporan-stok-'
@@ -83,19 +97,19 @@ class ReportController extends Controller
                     return;
                 }
 
-                /*
-                 * Menambahkan BOM agar karakter UTF-8 terbaca di Excel.
+                /**
+                 * Menambahkan BOM agar karakter UTF-8
+                 * terbaca dengan benar di Excel.
                  */
                 fwrite($handle, "\xEF\xBB\xBF");
 
-                /*
-                 * Menulis judul kolom laporan.
+                /**
+                 * Menulis judul kolom laporan stok.
                  */
                 fputcsv(
                     $handle,
                     [
                         'No.',
-                        'Kode Barang',
                         'Nama Barang',
                         'Kategori',
                         'Satuan',
@@ -116,19 +130,24 @@ class ReportController extends Controller
                     ->cursor();
 
                 foreach ($items as $item) {
+                    $inventoryValue =
+                        (float) $item->stock
+                        * (float) $item->purchase_price;
+
                     fputcsv(
                         $handle,
                         [
                             $number,
-                            $item->code,
                             $item->name,
-                            $item->category->name,
+                            $item->category?->name ?? '-',
                             $item->unit,
                             $item->purchase_price,
                             $item->stock,
                             $item->minimum_stock,
-                            $this->determineStockStatus($item),
-                            $item->stock * $item->purchase_price,
+                            $this->determineStockStatus(
+                                $item
+                            ),
+                            $inventoryValue,
                         ],
                         ';'
                     );
@@ -140,7 +159,8 @@ class ReportController extends Controller
             },
             $fileName,
             [
-                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Type' =>
+                    'text/csv; charset=UTF-8',
             ]
         );
     }
@@ -154,21 +174,23 @@ class ReportController extends Controller
      *     stock_status: string|null
      * }
      */
-    private function getStockFilters(Request $request): array
-    {
+    private function getStockFilters(
+        Request $request
+    ): array {
         $validated = $request->validate([
             'search' => [
                 'nullable',
                 'string',
                 'max:150',
             ],
-
             'category_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('categories', 'id'),
+                Rule::exists(
+                    'categories',
+                    'id'
+                ),
             ],
-
             'stock_status' => [
                 'nullable',
                 Rule::in([
@@ -181,37 +203,50 @@ class ReportController extends Controller
 
         return [
             'search' => trim(
-                (string) ($validated['search'] ?? '')
+                (string) (
+                    $validated['search']
+                    ?? ''
+                )
             ),
 
-            'category_id' => isset($validated['category_id'])
+            'category_id' => isset(
+                $validated['category_id']
+            )
                 ? (int) $validated['category_id']
                 : null,
 
-            'stock_status' => $validated['stock_status'] ?? null,
+            'stock_status' =>
+                $validated['stock_status']
+                ?? null,
         ];
     }
 
     /**
      * Membuat query laporan stok berdasarkan filter.
+     *
+     * @param array{
+     *     search: string,
+     *     category_id: int|null,
+     *     stock_status: string|null
+     * } $filters
      */
-    private function buildStockQuery(array $filters): Builder
-    {
+    private function buildStockQuery(
+        array $filters
+    ): Builder {
         return Item::query()
             ->when(
                 $filters['search'] !== '',
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $search = $filters['search'];
 
                     $query->where(
-                        function (Builder $query) use ($search): void {
+                        function (
+                            Builder $query
+                        ) use ($search): void {
                             $query
                                 ->where(
-                                    'code',
-                                    'like',
-                                    '%' . $search . '%'
-                                )
-                                ->orWhere(
                                     'name',
                                     'like',
                                     '%' . $search . '%'
@@ -223,9 +258,9 @@ class ReportController extends Controller
                                 )
                                 ->orWhereHas(
                                     'category',
-                                    function (Builder $categoryQuery) use (
-                                        $search
-                                    ): void {
+                                    function (
+                                        Builder $categoryQuery
+                                    ) use ($search): void {
                                         $categoryQuery->where(
                                             'name',
                                             'like',
@@ -239,7 +274,9 @@ class ReportController extends Controller
             )
             ->when(
                 $filters['category_id'] !== null,
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $query->where(
                         'category_id',
                         $filters['category_id']
@@ -247,7 +284,8 @@ class ReportController extends Controller
                 }
             )
             ->when(
-                $filters['stock_status'] === 'available',
+                $filters['stock_status']
+                    === 'available',
                 function (Builder $query): void {
                     $query->whereColumn(
                         'stock',
@@ -257,7 +295,8 @@ class ReportController extends Controller
                 }
             )
             ->when(
-                $filters['stock_status'] === 'low',
+                $filters['stock_status']
+                    === 'low',
                 function (Builder $query): void {
                     $query
                         ->where('stock', '>', 0)
@@ -269,9 +308,14 @@ class ReportController extends Controller
                 }
             )
             ->when(
-                $filters['stock_status'] === 'out',
+                $filters['stock_status']
+                    === 'out',
                 function (Builder $query): void {
-                    $query->where('stock', 0);
+                    $query->where(
+                        'stock',
+                        '<=',
+                        0
+                    );
                 }
             );
     }
@@ -279,13 +323,17 @@ class ReportController extends Controller
     /**
      * Menentukan status stok suatu barang.
      */
-    private function determineStockStatus(Item $item): string
-    {
-        if ((int) $item->stock === 0) {
+    private function determineStockStatus(
+        Item $item
+    ): string {
+        if ((int) $item->stock <= 0) {
             return 'Habis';
         }
 
-        if ((int) $item->stock <= (int) $item->minimum_stock) {
+        if (
+            (int) $item->stock
+            <= (int) $item->minimum_stock
+        ) {
             return 'Menipis';
         }
 
@@ -295,38 +343,56 @@ class ReportController extends Controller
     /**
      * Menampilkan laporan transaksi barang masuk.
      */
-    public function goodsReceipts(Request $request): View
-    {
-        $filters = $this->getGoodsReceiptFilters($request);
+    public function goodsReceipts(
+        Request $request
+    ): View {
+        $filters = $this->getGoodsReceiptFilters(
+            $request
+        );
 
-        $baseQuery = $this->buildGoodsReceiptQuery($filters);
+        $baseQuery = $this->buildGoodsReceiptQuery(
+            $filters
+        );
 
-        /*
-        * Membuat query ID transaksi agar ringkasan mengikuti filter.
-        */
-        $filteredReceiptIds = function () use ($baseQuery): Builder {
-            return (clone $baseQuery)->select('goods_receipts.id');
+        /**
+         * Membuat query ID transaksi agar
+         * ringkasan mengikuti filter.
+         */
+        $filteredReceiptIds = function () use (
+            $baseQuery
+        ): Builder {
+            return (clone $baseQuery)
+                ->select('goods_receipts.id');
         };
 
         $summary = [
-            'total_transactions' => (clone $baseQuery)->count(),
+            'total_transactions' =>
+                (clone $baseQuery)->count(),
 
-            'total_quantity' => (int) GoodsReceiptDetail::query()
-                ->whereIn(
-                    'goods_receipt_id',
-                    $filteredReceiptIds()
-                )
-                ->sum('quantity'),
+            'total_quantity' => (int)
+                GoodsReceiptDetail::query()
+                    ->whereIn(
+                        'goods_receipt_id',
+                        $filteredReceiptIds()
+                    )
+                    ->sum('quantity'),
 
-            'total_value' => (float) GoodsReceiptDetail::query()
-                ->whereIn(
-                    'goods_receipt_id',
-                    $filteredReceiptIds()
-                )
-                ->selectRaw(
-                    'COALESCE(SUM(quantity * purchase_price), 0) AS total_value'
-                )
-                ->value('total_value'),
+            'total_value' => (float)
+                GoodsReceiptDetail::query()
+                    ->whereIn(
+                        'goods_receipt_id',
+                        $filteredReceiptIds()
+                    )
+                    ->selectRaw(
+                        'COALESCE(
+                            SUM(
+                                quantity
+                                * purchase_price
+                            ),
+                            0
+                        ) AS total_value'
+                    )
+                    ->value('total_value'),
         ];
 
         $receipts = (clone $baseQuery)
@@ -337,14 +403,21 @@ class ReportController extends Controller
             ->withCount('details')
             ->withSum('details', 'quantity')
             ->addSelect([
-                'total_value' => GoodsReceiptDetail::query()
-                    ->selectRaw(
-                        'COALESCE(SUM(quantity * purchase_price), 0)'
-                    )
-                    ->whereColumn(
-                        'goods_receipt_id',
-                        'goods_receipts.id'
-                    ),
+                'total_value' =>
+                    GoodsReceiptDetail::query()
+                        ->selectRaw(
+                            'COALESCE(
+                                SUM(
+                                    quantity
+                                    * purchase_price
+                                ),
+                                0
+                            )'
+                        )
+                        ->whereColumn(
+                            'goods_receipt_id',
+                            'goods_receipts.id'
+                        ),
             ])
             ->orderByDesc('received_at')
             ->orderByDesc('id')
@@ -358,12 +431,15 @@ class ReportController extends Controller
                 'name',
             ]);
 
-        return view('reports.goods_receipts', compact(
-            'receipts',
-            'suppliers',
-            'filters',
-            'summary'
-        ));
+        return view(
+            'reports.goods_receipts',
+            compact(
+                'receipts',
+                'suppliers',
+                'filters',
+                'summary'
+            )
+        );
     }
 
     /**
@@ -372,7 +448,9 @@ class ReportController extends Controller
     public function exportGoodsReceipts(
         Request $request
     ): StreamedResponse {
-        $filters = $this->getGoodsReceiptFilters($request);
+        $filters = $this->getGoodsReceiptFilters(
+            $request
+        );
 
         $fileName = 'laporan-barang-masuk-'
             . now()->format('Y-m-d-His')
@@ -380,28 +458,31 @@ class ReportController extends Controller
 
         return Response::streamDownload(
             function () use ($filters): void {
-                $handle = fopen('php://output', 'w');
+                $handle = fopen(
+                    'php://output',
+                    'w'
+                );
 
                 if ($handle === false) {
                     return;
                 }
 
-                /*
-                * Menambahkan BOM agar karakter UTF-8 terbaca di Excel.
-                */
+                /**
+                 * Menambahkan BOM agar karakter UTF-8
+                 * terbaca dengan benar di Excel.
+                 */
                 fwrite($handle, "\xEF\xBB\xBF");
 
-                /*
-                * Menulis judul kolom laporan.
-                */
+                /**
+                 * Menulis judul kolom laporan
+                 * barang masuk.
+                 */
                 fputcsv(
                     $handle,
                     [
                         'No.',
-                        'Nomor Transaksi',
                         'Tanggal',
                         'Supplier',
-                        'Kode Barang',
                         'Nama Barang',
                         'Kategori',
                         'Jumlah',
@@ -416,40 +497,77 @@ class ReportController extends Controller
 
                 $number = 1;
 
-                $this->buildGoodsReceiptQuery($filters)
+                $this->buildGoodsReceiptQuery(
+                    $filters
+                )
                     ->with([
                         'supplier:id,name',
                         'user:id,name',
-                        'details.item:id,category_id,code,name,unit',
+                        'details.item:id,category_id,name,unit',
                         'details.item.category:id,name',
                     ])
                     ->chunkById(
                         200,
-                        function ($receipts) use (
+                        function (
+                            $receipts
+                        ) use (
                             $handle,
                             &$number
                         ): void {
-                            foreach ($receipts as $receipt) {
-                                foreach ($receipt->details as $detail) {
-                                    $subtotal = $detail->quantity
-                                        * $detail->purchase_price;
+                            foreach (
+                                $receipts
+                                as $receipt
+                            ) {
+                                foreach (
+                                    $receipt->details
+                                    as $detail
+                                ) {
+                                    $subtotal =
+                                        (float)
+                                        $detail->quantity
+                                        * (float)
+                                        $detail
+                                            ->purchase_price;
 
                                     fputcsv(
                                         $handle,
                                         [
                                             $number,
-                                            $receipt->receipt_number,
-                                            $receipt->received_at
-                                                ->format('d/m/Y'),
-                                            $receipt->supplier->name,
-                                            $detail->item->code,
-                                            $detail->item->name,
-                                            $detail->item->category->name,
+
+                                            $receipt
+                                                ->received_at
+                                                ?->format(
+                                                    'd/m/Y'
+                                                ) ?? '-',
+
+                                            $receipt
+                                                ->supplier
+                                                ?->name ?? '-',
+
+                                            $detail
+                                                ->item
+                                                ?->name ?? '-',
+
+                                            $detail
+                                                ->item
+                                                ?->category
+                                                ?->name ?? '-',
+
                                             $detail->quantity,
-                                            $detail->item->unit,
-                                            $detail->purchase_price,
+
+                                            $detail
+                                                ->item
+                                                ?->unit ?? '-',
+
+                                            $detail
+                                                ->purchase_price,
+
                                             $subtotal,
-                                            $receipt->user->name,
+
+                                            $receipt
+                                                ->user
+                                                ?->name ?? '-',
+
                                             $receipt->note,
                                         ],
                                         ';'
@@ -465,13 +583,15 @@ class ReportController extends Controller
             },
             $fileName,
             [
-                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Type' =>
+                    'text/csv; charset=UTF-8',
             ]
         );
     }
 
     /**
-     * Mengambil dan memvalidasi filter laporan barang masuk.
+     * Mengambil dan memvalidasi filter
+     * laporan barang masuk.
      *
      * @return array{
      *     search: string,
@@ -489,19 +609,19 @@ class ReportController extends Controller
                 'string',
                 'max:150',
             ],
-
             'supplier_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('suppliers', 'id'),
+                Rule::exists(
+                    'suppliers',
+                    'id'
+                ),
             ],
-
             'start_date' => [
                 'nullable',
                 'date',
                 'before_or_equal:today',
             ],
-
             'end_date' => [
                 'nullable',
                 'date',
@@ -512,21 +632,38 @@ class ReportController extends Controller
 
         return [
             'search' => trim(
-                (string) ($validated['search'] ?? '')
+                (string) (
+                    $validated['search']
+                    ?? ''
+                )
             ),
 
-            'supplier_id' => isset($validated['supplier_id'])
+            'supplier_id' => isset(
+                $validated['supplier_id']
+            )
                 ? (int) $validated['supplier_id']
                 : null,
 
-            'start_date' => $validated['start_date'] ?? null,
+            'start_date' =>
+                $validated['start_date']
+                ?? null,
 
-            'end_date' => $validated['end_date'] ?? null,
+            'end_date' =>
+                $validated['end_date']
+                ?? null,
         ];
     }
 
     /**
-     * Membuat query laporan barang masuk berdasarkan filter.
+     * Membuat query laporan barang masuk
+     * berdasarkan filter.
+     *
+     * @param array{
+     *     search: string,
+     *     supplier_id: int|null,
+     *     start_date: string|null,
+     *     end_date: string|null
+     * } $filters
      */
     private function buildGoodsReceiptQuery(
         array $filters
@@ -534,61 +671,77 @@ class ReportController extends Controller
         return GoodsReceipt::query()
             ->when(
                 $filters['search'] !== '',
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $search = $filters['search'];
 
                     $query->where(
-                        function (Builder $query) use ($search): void {
+                        function (
+                            Builder $query
+                        ) use ($search): void {
                             $query
                                 ->where(
-                                    'receipt_number',
-                                    'like',
-                                    '%' . $search . '%'
-                                )
-                                ->orWhere(
                                     'note',
                                     'like',
                                     '%' . $search . '%'
                                 )
                                 ->orWhereHas(
                                     'supplier',
-                                    function (Builder $supplierQuery) use (
-                                        $search
-                                    ): void {
-                                        $supplierQuery->where(
-                                            'name',
-                                            'like',
-                                            '%' . $search . '%'
-                                        );
+                                    function (
+                                        Builder $supplierQuery
+                                    ) use ($search): void {
+                                        $supplierQuery
+                                            ->where(
+                                                'name',
+                                                'like',
+                                                '%' . $search . '%'
+                                            );
                                     }
                                 )
                                 ->orWhereHas(
                                     'user',
-                                    function (Builder $userQuery) use (
-                                        $search
-                                    ): void {
-                                        $userQuery->where(
-                                            'name',
-                                            'like',
-                                            '%' . $search . '%'
-                                        );
+                                    function (
+                                        Builder $userQuery
+                                    ) use ($search): void {
+                                        $userQuery
+                                            ->where(
+                                                'name',
+                                                'like',
+                                                '%' . $search . '%'
+                                            );
                                     }
                                 )
                                 ->orWhereHas(
                                     'details.item',
-                                    function (Builder $itemQuery) use (
-                                        $search
-                                    ): void {
+                                    function (
+                                        Builder $itemQuery
+                                    ) use ($search): void {
                                         $itemQuery
                                             ->where(
-                                                'code',
+                                                'name',
                                                 'like',
                                                 '%' . $search . '%'
                                             )
                                             ->orWhere(
-                                                'name',
+                                                'unit',
                                                 'like',
                                                 '%' . $search . '%'
+                                            )
+                                            ->orWhereHas(
+                                                'category',
+                                                function (
+                                                    Builder $categoryQuery
+                                                ) use ($search): void {
+                                                    $categoryQuery
+                                                        ->where(
+                                                            'name',
+                                                            'like',
+                                                            '%'
+                                                                . $search
+                                                                . '%'
+                                                        );
+                                                }
                                             );
                                     }
                                 );
@@ -598,7 +751,9 @@ class ReportController extends Controller
             )
             ->when(
                 $filters['supplier_id'] !== null,
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $query->where(
                         'supplier_id',
                         $filters['supplier_id']
@@ -607,7 +762,9 @@ class ReportController extends Controller
             )
             ->when(
                 $filters['start_date'] !== null,
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $query->whereDate(
                         'received_at',
                         '>=',
@@ -617,7 +774,9 @@ class ReportController extends Controller
             )
             ->when(
                 $filters['end_date'] !== null,
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $query->whereDate(
                         'received_at',
                         '<=',
@@ -630,32 +789,44 @@ class ReportController extends Controller
     /**
      * Menampilkan laporan transaksi barang keluar.
      */
-    public function goodsIssues(Request $request): View
-    {
-        $filters = $this->getGoodsIssueFilters($request);
+    public function goodsIssues(
+        Request $request
+    ): View {
+        $filters = $this->getGoodsIssueFilters(
+            $request
+        );
 
-        $baseQuery = $this->buildGoodsIssueQuery($filters);
+        $baseQuery = $this->buildGoodsIssueQuery(
+            $filters
+        );
 
-        /*
-        * Membuat query ID transaksi agar ringkasan mengikuti filter.
-        */
-        $filteredIssueIds = function () use ($baseQuery): Builder {
-            return (clone $baseQuery)->select('goods_issues.id');
+        /**
+         * Membuat query ID transaksi agar
+         * ringkasan mengikuti filter.
+         */
+        $filteredIssueIds = function () use (
+            $baseQuery
+        ): Builder {
+            return (clone $baseQuery)
+                ->select('goods_issues.id');
         };
 
         $summary = [
-            'total_transactions' => (clone $baseQuery)->count(),
+            'total_transactions' =>
+                (clone $baseQuery)->count(),
 
-            'total_quantity' => (int) GoodsIssueDetail::query()
-                ->whereIn(
-                    'goods_issue_id',
-                    $filteredIssueIds()
-                )
-                ->sum('quantity'),
+            'total_quantity' => (int)
+                GoodsIssueDetail::query()
+                    ->whereIn(
+                        'goods_issue_id',
+                        $filteredIssueIds()
+                    )
+                    ->sum('quantity'),
 
-            'total_destinations' => (clone $baseQuery)
-                ->distinct()
-                ->count('destination'),
+            'total_destinations' =>
+                (clone $baseQuery)
+                    ->distinct()
+                    ->count('destination'),
         ];
 
         $issues = (clone $baseQuery)
@@ -669,11 +840,14 @@ class ReportController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('reports.goods_issues', compact(
-            'issues',
-            'filters',
-            'summary'
-        ));
+        return view(
+            'reports.goods_issues',
+            compact(
+                'issues',
+                'filters',
+                'summary'
+            )
+        );
     }
 
     /**
@@ -682,7 +856,9 @@ class ReportController extends Controller
     public function exportGoodsIssues(
         Request $request
     ): StreamedResponse {
-        $filters = $this->getGoodsIssueFilters($request);
+        $filters = $this->getGoodsIssueFilters(
+            $request
+        );
 
         $fileName = 'laporan-barang-keluar-'
             . now()->format('Y-m-d-His')
@@ -690,28 +866,31 @@ class ReportController extends Controller
 
         return Response::streamDownload(
             function () use ($filters): void {
-                $handle = fopen('php://output', 'w');
+                $handle = fopen(
+                    'php://output',
+                    'w'
+                );
 
                 if ($handle === false) {
                     return;
                 }
 
-                /*
-                * Menambahkan BOM agar karakter UTF-8 terbaca di Excel.
-                */
+                /**
+                 * Menambahkan BOM agar karakter UTF-8
+                 * terbaca dengan benar di Excel.
+                 */
                 fwrite($handle, "\xEF\xBB\xBF");
 
-                /*
-                * Menulis judul kolom laporan.
-                */
+                /**
+                 * Menulis judul kolom laporan
+                 * barang keluar.
+                 */
                 fputcsv(
                     $handle,
                     [
                         'No.',
-                        'Nomor Transaksi',
                         'Tanggal',
                         'Tujuan',
-                        'Kode Barang',
                         'Nama Barang',
                         'Kategori',
                         'Jumlah',
@@ -724,34 +903,62 @@ class ReportController extends Controller
 
                 $number = 1;
 
-                $this->buildGoodsIssueQuery($filters)
+                $this->buildGoodsIssueQuery(
+                    $filters
+                )
                     ->with([
                         'user:id,name',
-                        'details.item:id,category_id,code,name,unit',
+                        'details.item:id,category_id,name,unit',
                         'details.item.category:id,name',
                     ])
                     ->chunkById(
                         200,
-                        function ($issues) use (
+                        function (
+                            $issues
+                        ) use (
                             $handle,
                             &$number
                         ): void {
-                            foreach ($issues as $issue) {
-                                foreach ($issue->details as $detail) {
+                            foreach (
+                                $issues
+                                as $issue
+                            ) {
+                                foreach (
+                                    $issue->details
+                                    as $detail
+                                ) {
                                     fputcsv(
                                         $handle,
                                         [
                                             $number,
-                                            $issue->issue_number,
-                                            $issue->issued_at
-                                                ->format('d/m/Y'),
+
+                                            $issue
+                                                ->issued_at
+                                                ?->format(
+                                                    'd/m/Y'
+                                                ) ?? '-',
+
                                             $issue->destination,
-                                            $detail->item->code,
-                                            $detail->item->name,
-                                            $detail->item->category->name,
+
+                                            $detail
+                                                ->item
+                                                ?->name ?? '-',
+
+                                            $detail
+                                                ->item
+                                                ?->category
+                                                ?->name ?? '-',
+
                                             $detail->quantity,
-                                            $detail->item->unit,
-                                            $issue->user->name,
+
+                                            $detail
+                                                ->item
+                                                ?->unit ?? '-',
+
+                                            $issue
+                                                ->user
+                                                ?->name ?? '-',
+
                                             $issue->note,
                                         ],
                                         ';'
@@ -767,13 +974,15 @@ class ReportController extends Controller
             },
             $fileName,
             [
-                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Type' =>
+                    'text/csv; charset=UTF-8',
             ]
         );
     }
 
     /**
-     * Mengambil dan memvalidasi filter laporan barang keluar.
+     * Mengambil dan memvalidasi filter
+     * laporan barang keluar.
      *
      * @return array{
      *     search: string,
@@ -790,13 +999,11 @@ class ReportController extends Controller
                 'string',
                 'max:150',
             ],
-
             'start_date' => [
                 'nullable',
                 'date',
                 'before_or_equal:today',
             ],
-
             'end_date' => [
                 'nullable',
                 'date',
@@ -807,17 +1014,31 @@ class ReportController extends Controller
 
         return [
             'search' => trim(
-                (string) ($validated['search'] ?? '')
+                (string) (
+                    $validated['search']
+                    ?? ''
+                )
             ),
 
-            'start_date' => $validated['start_date'] ?? null,
+            'start_date' =>
+                $validated['start_date']
+                ?? null,
 
-            'end_date' => $validated['end_date'] ?? null,
+            'end_date' =>
+                $validated['end_date']
+                ?? null,
         ];
     }
 
     /**
-     * Membuat query laporan barang keluar berdasarkan filter.
+     * Membuat query laporan barang keluar
+     * berdasarkan filter.
+     *
+     * @param array{
+     *     search: string,
+     *     start_date: string|null,
+     *     end_date: string|null
+     * } $filters
      */
     private function buildGoodsIssueQuery(
         array $filters
@@ -825,18 +1046,17 @@ class ReportController extends Controller
         return GoodsIssue::query()
             ->when(
                 $filters['search'] !== '',
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $search = $filters['search'];
 
                     $query->where(
-                        function (Builder $query) use ($search): void {
+                        function (
+                            Builder $query
+                        ) use ($search): void {
                             $query
                                 ->where(
-                                    'issue_number',
-                                    'like',
-                                    '%' . $search . '%'
-                                )
-                                ->orWhere(
                                     'destination',
                                     'like',
                                     '%' . $search . '%'
@@ -848,31 +1068,47 @@ class ReportController extends Controller
                                 )
                                 ->orWhereHas(
                                     'user',
-                                    function (Builder $userQuery) use (
-                                        $search
-                                    ): void {
-                                        $userQuery->where(
-                                            'name',
-                                            'like',
-                                            '%' . $search . '%'
-                                        );
+                                    function (
+                                        Builder $userQuery
+                                    ) use ($search): void {
+                                        $userQuery
+                                            ->where(
+                                                'name',
+                                                'like',
+                                                '%' . $search . '%'
+                                            );
                                     }
                                 )
                                 ->orWhereHas(
                                     'details.item',
-                                    function (Builder $itemQuery) use (
-                                        $search
-                                    ): void {
+                                    function (
+                                        Builder $itemQuery
+                                    ) use ($search): void {
                                         $itemQuery
                                             ->where(
-                                                'code',
+                                                'name',
                                                 'like',
                                                 '%' . $search . '%'
                                             )
                                             ->orWhere(
-                                                'name',
+                                                'unit',
                                                 'like',
                                                 '%' . $search . '%'
+                                            )
+                                            ->orWhereHas(
+                                                'category',
+                                                function (
+                                                    Builder $categoryQuery
+                                                ) use ($search): void {
+                                                    $categoryQuery
+                                                        ->where(
+                                                            'name',
+                                                            'like',
+                                                            '%'
+                                                                . $search
+                                                                . '%'
+                                                        );
+                                                }
                                             );
                                     }
                                 );
@@ -882,7 +1118,9 @@ class ReportController extends Controller
             )
             ->when(
                 $filters['start_date'] !== null,
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $query->whereDate(
                         'issued_at',
                         '>=',
@@ -892,7 +1130,9 @@ class ReportController extends Controller
             )
             ->when(
                 $filters['end_date'] !== null,
-                function (Builder $query) use ($filters): void {
+                function (
+                    Builder $query
+                ) use ($filters): void {
                     $query->whereDate(
                         'issued_at',
                         '<=',

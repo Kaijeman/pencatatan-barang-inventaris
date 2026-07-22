@@ -4,45 +4,41 @@
 
 @section('content')
     <div class="space-y-6">
+
         {{-- Header halaman dashboard. --}}
         <div
-            class="flex flex-col gap-4 rounded-2xl border border-slate-200
-                bg-white p-6 shadow-sm sm:flex-row sm:items-center
-                sm:justify-between"
+            class="flex flex-col gap-4 rounded-2xl border
+                border-slate-200 bg-white p-6 shadow-sm
+                sm:flex-row sm:items-center sm:justify-between"
         >
             <div>
                 <p
-                    class="text-sm font-medium uppercase tracking-wide
-                        text-blue-600"
+                    class="text-sm font-medium uppercase
+                        tracking-wide text-blue-600"
                 >
                     Ringkasan Gudang
                 </p>
 
-                <h1
-                    class="mt-1 text-2xl font-bold text-slate-800"
-                >
+                <h1 class="mt-1 text-2xl font-bold text-slate-800">
                     Dashboard Inventaris
                 </h1>
 
-                <p
-                    class="mt-1 text-sm text-slate-500"
-                >
+                <p class="mt-1 text-sm text-slate-500">
                     Pantau stok dan aktivitas gudang dalam satu halaman.
                 </p>
             </div>
 
+            {{-- Informasi pengguna aktif. --}}
             <div
-                class="rounded-xl bg-slate-50 px-4 py-3 text-sm
-                    text-slate-600"
+                class="rounded-xl bg-slate-50 px-4 py-3
+                    text-sm text-slate-600"
             >
                 <div class="font-semibold text-slate-800">
                     {{ auth()->user()->name }}
                 </div>
 
                 <div>
-                    {{ auth()->user()->role === 'kepala_gudang'
-                        ? 'Kepala Gudang'
-                        : 'Staff Gudang' }}
+                    Pengguna Sistem
                 </div>
 
                 <div class="mt-1 text-xs text-slate-500">
@@ -59,8 +55,9 @@
             <a
                 href="{{ route('items.index') }}"
                 class="group rounded-2xl border border-slate-200
-                    bg-white p-5 shadow-sm transition hover:-translate-y-0.5
-                    hover:border-blue-300 hover:shadow-md"
+                    bg-white p-5 shadow-sm transition
+                    hover:-translate-y-0.5 hover:border-blue-300
+                    hover:shadow-md"
             >
                 <div class="flex items-start justify-between">
                     <div>
@@ -77,8 +74,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-blue-100 text-xl text-blue-600"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-blue-100
+                            text-xl text-blue-600"
                     >
                         <i class="bi bi-box-seam"></i>
                     </div>
@@ -95,8 +93,9 @@
             <a
                 href="{{ route('categories.index') }}"
                 class="group rounded-2xl border border-slate-200
-                    bg-white p-5 shadow-sm transition hover:-translate-y-0.5
-                    hover:border-violet-300 hover:shadow-md"
+                    bg-white p-5 shadow-sm transition
+                    hover:-translate-y-0.5 hover:border-violet-300
+                    hover:shadow-md"
             >
                 <div class="flex items-start justify-between">
                     <div>
@@ -113,9 +112,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-violet-100 text-xl
-                            text-violet-600"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-violet-100
+                            text-xl text-violet-600"
                     >
                         <i class="bi bi-tags"></i>
                     </div>
@@ -132,8 +131,9 @@
             <a
                 href="{{ route('suppliers.index') }}"
                 class="group rounded-2xl border border-slate-200
-                    bg-white p-5 shadow-sm transition hover:-translate-y-0.5
-                    hover:border-emerald-300 hover:shadow-md"
+                    bg-white p-5 shadow-sm transition
+                    hover:-translate-y-0.5 hover:border-emerald-300
+                    hover:shadow-md"
             >
                 <div class="flex items-start justify-between">
                     <div>
@@ -150,9 +150,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-emerald-100 text-xl
-                            text-emerald-600"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-emerald-100
+                            text-xl text-emerald-600"
                     >
                         <i class="bi bi-truck"></i>
                     </div>
@@ -169,8 +169,9 @@
             <a
                 href="{{ route('reports.stock') }}"
                 class="group rounded-2xl border border-slate-200
-                    bg-white p-5 shadow-sm transition hover:-translate-y-0.5
-                    hover:border-cyan-300 hover:shadow-md"
+                    bg-white p-5 shadow-sm transition
+                    hover:-translate-y-0.5 hover:border-cyan-300
+                    hover:shadow-md"
             >
                 <div class="flex items-start justify-between">
                     <div>
@@ -187,8 +188,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-cyan-100 text-xl text-cyan-600"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-cyan-100
+                            text-xl text-cyan-600"
                     >
                         <i class="bi bi-boxes"></i>
                     </div>
@@ -227,9 +229,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-amber-100 text-xl
-                            text-amber-700"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-amber-100
+                            text-xl text-amber-700"
                     >
                         <i class="bi bi-exclamation-triangle"></i>
                     </div>
@@ -255,8 +257,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-red-100 text-xl text-red-700"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-red-100
+                            text-xl text-red-700"
                     >
                         <i class="bi bi-x-circle"></i>
                     </div>
@@ -282,9 +285,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-emerald-100 text-xl
-                            text-emerald-700"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-emerald-100
+                            text-xl text-emerald-700"
                     >
                         <i class="bi bi-box-arrow-in-down"></i>
                     </div>
@@ -310,9 +313,9 @@
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center
-                            rounded-xl bg-orange-100 text-xl
-                            text-orange-700"
+                        class="flex h-11 w-11 items-center
+                            justify-center rounded-xl bg-orange-100
+                            text-xl text-orange-700"
                     >
                         <i class="bi bi-box-arrow-up"></i>
                     </div>
@@ -322,27 +325,22 @@
 
         {{-- Tombol aksi cepat operasional. --}}
         <div
-            class="rounded-2xl border border-slate-200 bg-white
-                p-6 shadow-sm"
+            class="rounded-2xl border border-slate-200
+                bg-white p-6 shadow-sm"
         >
-            <div
-                class="flex flex-col gap-2 sm:flex-row
-                    sm:items-center sm:justify-between"
-            >
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800">
-                        Aksi Cepat
-                    </h2>
+            <div>
+                <h2 class="text-lg font-bold text-slate-800">
+                    Aksi Cepat
+                </h2>
 
-                    <p class="text-sm text-slate-500">
-                        Akses langsung ke aktivitas utama gudang.
-                    </p>
-                </div>
+                <p class="text-sm text-slate-500">
+                    Akses langsung ke aktivitas utama gudang.
+                </p>
             </div>
 
             <div
-                class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2
-                    xl:grid-cols-4"
+                class="mt-5 grid grid-cols-1 gap-3
+                    sm:grid-cols-2 xl:grid-cols-3"
             >
                 <a
                     href="{{ route('goods-receipts.create') }}"
@@ -367,17 +365,6 @@
                 </a>
 
                 <a
-                    href="{{ route('stock-opnames.create') }}"
-                    class="flex items-center gap-3 rounded-xl
-                        bg-violet-600 px-4 py-3 font-semibold
-                        text-white transition hover:bg-violet-700"
-                >
-                    <i class="bi bi-clipboard-check text-lg"></i>
-
-                    <span>Lakukan Stock Opname</span>
-                </a>
-
-                <a
                     href="{{ route('items.create') }}"
                     class="flex items-center gap-3 rounded-xl
                         bg-blue-600 px-4 py-3 font-semibold
@@ -392,6 +379,8 @@
 
         {{-- Daftar transaksi terbaru. --}}
         <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+
+            {{-- Barang masuk terbaru. --}}
             <div
                 class="overflow-hidden rounded-2xl border
                     border-slate-200 bg-white shadow-sm"
@@ -428,7 +417,7 @@
                                         font-semibold uppercase
                                         tracking-wide text-slate-500"
                                 >
-                                    Transaksi
+                                    Tanggal
                                 </th>
 
                                 <th
@@ -464,16 +453,17 @@
                                                 text-blue-600
                                                 hover:underline"
                                         >
-                                            {{ $receipt->receipt_number }}
+                                            {{ $receipt
+                                                ->received_at
+                                                ?->format('d/m/Y') ?? '-' }}
                                         </a>
 
                                         <div
                                             class="mt-1 text-xs
                                                 text-slate-500"
                                         >
-                                            {{ $receipt->received_at?->format(
-                                                'd/m/Y'
-                                            ) ?? '-' }}
+                                            Dicatat oleh
+                                            {{ $receipt->user?->name ?? '-' }}
                                         </div>
                                     </td>
 
@@ -481,7 +471,9 @@
                                         class="px-6 py-4 text-sm
                                             text-slate-700"
                                     >
-                                        {{ $receipt->supplier?->name ?? '-' }}
+                                        {{ $receipt
+                                            ->supplier
+                                            ?->name ?? '-' }}
                                     </td>
 
                                     <td
@@ -496,6 +488,7 @@
                                                 ?? 0
                                             )
                                         ) }}
+                                        unit
                                     </td>
                                 </tr>
                             @empty
@@ -514,6 +507,7 @@
                 </div>
             </div>
 
+            {{-- Barang keluar terbaru. --}}
             <div
                 class="overflow-hidden rounded-2xl border
                     border-slate-200 bg-white shadow-sm"
@@ -550,7 +544,7 @@
                                         font-semibold uppercase
                                         tracking-wide text-slate-500"
                                 >
-                                    Transaksi
+                                    Tanggal
                                 </th>
 
                                 <th
@@ -586,16 +580,17 @@
                                                 text-blue-600
                                                 hover:underline"
                                         >
-                                            {{ $issue->issue_number }}
+                                            {{ $issue
+                                                ->issued_at
+                                                ?->format('d/m/Y') ?? '-' }}
                                         </a>
 
                                         <div
                                             class="mt-1 text-xs
                                                 text-slate-500"
                                         >
-                                            {{ $issue->issued_at?->format(
-                                                'd/m/Y'
-                                            ) ?? '-' }}
+                                            Dicatat oleh
+                                            {{ $issue->user?->name ?? '-' }}
                                         </div>
                                     </td>
 
@@ -618,6 +613,7 @@
                                                 ?? 0
                                             )
                                         ) }}
+                                        unit
                                     </td>
                                 </tr>
                             @empty
@@ -674,40 +670,40 @@
                         <tr>
                             <th
                                 class="px-6 py-3 text-left text-xs
-                                    font-semibold uppercase tracking-wide
-                                    text-slate-500"
+                                    font-semibold uppercase
+                                    tracking-wide text-slate-500"
                             >
                                 Barang
                             </th>
 
                             <th
                                 class="px-6 py-3 text-left text-xs
-                                    font-semibold uppercase tracking-wide
-                                    text-slate-500"
+                                    font-semibold uppercase
+                                    tracking-wide text-slate-500"
                             >
                                 Kategori
                             </th>
 
                             <th
                                 class="px-6 py-3 text-right text-xs
-                                    font-semibold uppercase tracking-wide
-                                    text-slate-500"
+                                    font-semibold uppercase
+                                    tracking-wide text-slate-500"
                             >
                                 Stok
                             </th>
 
                             <th
                                 class="px-6 py-3 text-right text-xs
-                                    font-semibold uppercase tracking-wide
-                                    text-slate-500"
+                                    font-semibold uppercase
+                                    tracking-wide text-slate-500"
                             >
                                 Minimum
                             </th>
 
                             <th
                                 class="px-6 py-3 text-center text-xs
-                                    font-semibold uppercase tracking-wide
-                                    text-slate-500"
+                                    font-semibold uppercase
+                                    tracking-wide text-slate-500"
                             >
                                 Status
                             </th>
@@ -726,7 +722,7 @@
                                     </div>
 
                                     <div class="text-xs text-slate-500">
-                                        {{ $item->code }}
+                                        {{ $item->unit }}
                                     </div>
                                 </td>
 
@@ -741,7 +737,9 @@
                                     class="px-6 py-4 text-right
                                         font-semibold text-slate-800"
                                 >
-                                    {{ number_format((int) $item->stock) }}
+                                    {{ number_format(
+                                        (int) $item->stock
+                                    ) }}
                                     {{ $item->unit }}
                                 </td>
 
@@ -758,18 +756,19 @@
                                 <td class="px-6 py-4 text-center">
                                     @if ((int) $item->stock <= 0)
                                         <span
-                                            class="inline-flex rounded-full
-                                                bg-red-100 px-3 py-1
-                                                text-xs font-semibold
-                                                text-red-700"
+                                            class="inline-flex
+                                                rounded-full bg-red-100
+                                                px-3 py-1 text-xs
+                                                font-semibold text-red-700"
                                         >
                                             Stok Habis
                                         </span>
                                     @else
                                         <span
-                                            class="inline-flex rounded-full
-                                                bg-amber-100 px-3 py-1
-                                                text-xs font-semibold
+                                            class="inline-flex
+                                                rounded-full bg-amber-100
+                                                px-3 py-1 text-xs
+                                                font-semibold
                                                 text-amber-700"
                                         >
                                             Stok Menipis

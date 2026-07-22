@@ -12,30 +12,21 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Jumlah maksimal percobaan pengiriman notifikasi.
-     */
     public int $tries = 3;
 
-    /**
-     * Batas waktu pemrosesan notifikasi dalam detik.
-     */
     public int $timeout = 60;
 
     /**
-     * Membuat instance notifikasi barang keluar.
+     * Membuat notifikasi barang keluar.
      */
     public function __construct(
         public GoodsIssue $goodsIssue
     ) {
-        /**
-         * Memastikan notifikasi diproses setelah transaksi selesai.
-         */
         $this->afterCommit();
     }
 
     /**
-     * Menentukan channel pengiriman notifikasi.
+     * Menentukan channel notifikasi.
      *
      * @return array<int, string>
      */
@@ -45,7 +36,7 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Menentukan nama queue untuk setiap channel.
+     * Menentukan queue notifikasi.
      *
      * @return array<string, string>
      */
@@ -57,7 +48,7 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Menentukan jeda sebelum percobaan ulang.
+     * Menentukan jeda percobaan ulang.
      */
     public function backoff(): int
     {
@@ -65,13 +56,10 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Membuat isi notifikasi email barang keluar.
+     * Membuat isi email barang keluar.
      */
     public function toMail(object $notifiable): MailMessage
     {
-        /**
-         * Memuat relasi yang diperlukan dalam email.
-         */
         $this->goodsIssue->loadMissing([
             'user:id,name',
             'details',
@@ -82,17 +70,16 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
             ->sum('quantity');
 
         return (new MailMessage)
+            ->mailer('smtp')
             ->subject(
-                'Barang Keluar - '
-                . $this->goodsIssue->issue_number
+                'Transaksi Barang Keluar - '
+                . $this->goodsIssue
+                    ->issued_at
+                    ->format('d/m/Y')
             )
             ->greeting('Halo ' . $notifiable->name . ',')
             ->line(
                 'Transaksi barang keluar telah berhasil dicatat.'
-            )
-            ->line(
-                'Nomor Transaksi: '
-                . $this->goodsIssue->issue_number
             )
             ->line(
                 'Tanggal: '
@@ -127,24 +114,24 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
                 )
             )
             ->line(
-                'Email ini dikirim otomatis oleh sistem.'
+                'Email ini dikirim otomatis oleh sistem inventaris gudang.'
             );
     }
 
     /**
-     * Membuat representasi data notifikasi.
+     * Membuat data notifikasi.
      *
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
         return [
-            'goods_issue_id' =>
-                $this->goodsIssue->id,
-            'issue_number' =>
-                $this->goodsIssue->issue_number,
-            'destination' =>
-                $this->goodsIssue->destination,
+            'goods_issue_id' => $this->goodsIssue->id,
+            'issued_at' =>
+                $this->goodsIssue
+                    ->issued_at
+                    ->format('Y-m-d'),
+            'destination' => $this->goodsIssue->destination,
         ];
     }
 }

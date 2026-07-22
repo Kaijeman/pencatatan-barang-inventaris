@@ -12,30 +12,21 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
 {
     use Queueable;
 
-    /**
-     * Jumlah maksimal percobaan pengiriman notifikasi.
-     */
     public int $tries = 3;
 
-    /**
-     * Batas waktu pemrosesan notifikasi dalam detik.
-     */
     public int $timeout = 60;
 
     /**
-     * Membuat instance notifikasi barang masuk.
+     * Membuat notifikasi barang masuk.
      */
     public function __construct(
         public GoodsReceipt $goodsReceipt
     ) {
-        /**
-         * Memastikan notifikasi diproses setelah transaksi selesai.
-         */
         $this->afterCommit();
     }
 
     /**
-     * Menentukan channel pengiriman notifikasi.
+     * Menentukan channel notifikasi.
      *
      * @return array<int, string>
      */
@@ -45,7 +36,7 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
     }
 
     /**
-     * Menentukan nama queue untuk setiap channel.
+     * Menentukan queue notifikasi.
      *
      * @return array<string, string>
      */
@@ -57,7 +48,7 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
     }
 
     /**
-     * Menentukan jeda sebelum percobaan ulang.
+     * Menentukan jeda percobaan ulang.
      */
     public function backoff(): int
     {
@@ -65,13 +56,10 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
     }
 
     /**
-     * Membuat isi notifikasi email barang masuk.
+     * Membuat isi email barang masuk.
      */
     public function toMail(object $notifiable): MailMessage
     {
-        /**
-         * Memuat relasi yang diperlukan dalam email.
-         */
         $this->goodsReceipt->loadMissing([
             'supplier:id,name',
             'user:id,name',
@@ -84,25 +72,25 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
 
         $totalValue = (float) $this->goodsReceipt
             ->details
-            ->sum(function ($detail): float {
-                return (float) (
-                    $detail->quantity
-                    * $detail->purchase_price
-                );
-            });
+            ->sum(
+                fn ($detail): float =>
+                    (float) (
+                        $detail->quantity
+                        * $detail->purchase_price
+                    )
+            );
 
         return (new MailMessage)
+            ->mailer('smtp')
             ->subject(
-                'Barang Masuk - '
-                . $this->goodsReceipt->receipt_number
+                'Transaksi Barang Masuk - '
+                . $this->goodsReceipt
+                    ->received_at
+                    ->format('d/m/Y')
             )
             ->greeting('Halo ' . $notifiable->name . ',')
             ->line(
                 'Transaksi barang masuk telah berhasil dicatat.'
-            )
-            ->line(
-                'Nomor Transaksi: '
-                . $this->goodsReceipt->receipt_number
             )
             ->line(
                 'Tanggal: '
@@ -146,12 +134,12 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
                 )
             )
             ->line(
-                'Email ini dikirim otomatis oleh sistem.'
+                'Email ini dikirim otomatis oleh sistem inventaris gudang.'
             );
     }
 
     /**
-     * Membuat representasi data notifikasi.
+     * Membuat data notifikasi.
      *
      * @return array<string, mixed>
      */
@@ -160,8 +148,10 @@ class GoodsReceiptCreatedNotification extends Notification implements ShouldQueu
         return [
             'goods_receipt_id' =>
                 $this->goodsReceipt->id,
-            'receipt_number' =>
-                $this->goodsReceipt->receipt_number,
+            'received_at' =>
+                $this->goodsReceipt
+                    ->received_at
+                    ->format('Y-m-d'),
             'supplier_name' =>
                 $this->goodsReceipt->supplier->name,
         ];

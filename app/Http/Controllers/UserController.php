@@ -19,19 +19,6 @@ class UserController extends Controller
     {
         $search = trim((string) $request->input('search'));
 
-        $requestedRole = $request->input('role');
-
-        $role = in_array(
-            $requestedRole,
-            [
-                'kepala_gudang',
-                'staff_gudang',
-            ],
-            true
-        )
-            ? $requestedRole
-            : null;
-
         $users = User::query()
             ->when(
                 $search !== '',
@@ -53,20 +40,13 @@ class UserController extends Controller
                     );
                 }
             )
-            ->when(
-                $role !== null,
-                function ($query) use ($role): void {
-                    $query->where('role', $role);
-                }
-            )
             ->orderBy('name')
             ->paginate(10)
             ->withQueryString();
 
         return view('users.index', compact(
             'users',
-            'search',
-            'role'
+            'search'
         ));
     }
 
@@ -89,7 +69,6 @@ class UserController extends Controller
         User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
             'password' => Hash::make(
                 $validated['password']
             ),
@@ -120,39 +99,18 @@ class UserController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
-        /*
-         * Mencegah perubahan role kepala gudang terakhir.
-         */
-        if (
-            $user->role === 'kepala_gudang'
-            && $validated['role'] !== 'kepala_gudang'
-            && $this->isLastHeadWarehouse($user)
-        ) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with(
-                    'error',
-                    'Role tidak dapat diubah karena pengguna ini merupakan kepala gudang terakhir.'
-                );
-        }
-
-        $updateData = [
+        $data = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
         ];
 
-        /*
-         * Memperbarui password hanya ketika password baru diisi.
-         */
         if (! empty($validated['password'])) {
-            $updateData['password'] = Hash::make(
+            $data['password'] = Hash::make(
                 $validated['password']
             );
         }
 
-        $user->update($updateData);
+        $user->update($data);
 
         return redirect()
             ->route('users.index')
@@ -167,34 +125,20 @@ class UserController extends Controller
      */
     public function destroy(User $user): RedirectResponse
     {
-        /*
-         * Mencegah pengguna menghapus akun sendiri.
-         */
-        if ($user->id === auth()->id()) {
+        if ($user->is(auth()->user())) {
             return redirect()
                 ->route('users.index')
                 ->with(
                     'error',
-                    'Anda tidak dapat menghapus akun yang sedang digunakan.'
+                    'Akun yang sedang digunakan tidak dapat dihapus.'
                 );
         }
 
-        /*
-         * Mencegah penghapusan kepala gudang terakhir.
-         */
-        if ($this->isLastHeadWarehouse($user)) {
-            return redirect()
-                ->route('users.index')
-                ->with(
-                    'error',
-                    'Pengguna tidak dapat dihapus karena merupakan kepala gudang terakhir.'
-                );
-        }
+        $hasTransactionHistory =
+            $user->goodsReceipts()->exists()
+            || $user->goodsIssues()->exists();
 
-        /*
-         * Mencegah penghapusan pengguna yang memiliki riwayat transaksi.
-         */
-        if ($this->hasTransactionHistory($user)) {
+        if ($hasTransactionHistory) {
             return redirect()
                 ->route('users.index')
                 ->with(
@@ -211,30 +155,5 @@ class UserController extends Controller
                 'success',
                 'Pengguna berhasil dihapus.'
             );
-    }
-
-    /**
-     * Memeriksa apakah pengguna merupakan kepala gudang terakhir.
-     */
-    private function isLastHeadWarehouse(User $user): bool
-    {
-        if ($user->role !== 'kepala_gudang') {
-            return false;
-        }
-
-        return User::query()
-            ->where('role', 'kepala_gudang')
-            ->where('id', '!=', $user->id)
-            ->doesntExist();
-    }
-
-    /**
-     * Memeriksa riwayat transaksi pengguna.
-     */
-    private function hasTransactionHistory(User $user): bool
-    {
-        return $user->goodsReceipts()->exists()
-            || $user->goodsIssues()->exists()
-            || $user->stockOpnames()->exists();
     }
 }

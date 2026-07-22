@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\User;
 use App\Notifications\GoodsIssueCreatedNotification;
 use App\Notifications\StockAlertNotification;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,16 +25,11 @@ class GoodsIssueController extends Controller
      */
     public function index(Request $request): View
     {
-        $search = trim(
-            (string) $request->input('search')
-        );
-
+        $search = trim((string) $request->input('search'));
         $date = $request->input('date');
 
         $issues = GoodsIssue::query()
-            ->with([
-                'user:id,name',
-            ])
+            ->with('user:id,name')
             ->withCount('details')
             ->withSum('details', 'quantity')
             ->when(
@@ -43,12 +39,12 @@ class GoodsIssueController extends Controller
                         function ($query) use ($search): void {
                             $query
                                 ->where(
-                                    'issue_number',
+                                    'destination',
                                     'like',
                                     '%' . $search . '%'
                                 )
                                 ->orWhere(
-                                    'destination',
+                                    'note',
                                     'like',
                                     '%' . $search . '%'
                                 )
@@ -71,10 +67,7 @@ class GoodsIssueController extends Controller
             ->when(
                 $date,
                 function ($query) use ($date): void {
-                    $query->whereDate(
-                        'issued_at',
-                        $date
-                    );
+                    $query->whereDate('issued_at', $date);
                 }
             )
             ->orderByDesc('issued_at')
@@ -100,15 +93,11 @@ class GoodsIssueController extends Controller
             ->get([
                 'id',
                 'category_id',
-                'code',
                 'name',
                 'unit',
                 'stock',
             ]);
 
-        /**
-         * Memeriksa apakah masih ada barang yang tersedia.
-         */
         $hasAvailableItems = $items->contains(
             fn (Item $item): bool =>
                 (int) $item->stock > 0
@@ -129,7 +118,7 @@ class GoodsIssueController extends Controller
         $validated = $request->validated();
 
         /**
-         * Menampung barang yang status stoknya memburuk.
+         * Menampung perubahan status stok.
          *
          * @var array<int, array<string, mixed>> $stockAlerts
          */
@@ -141,19 +130,10 @@ class GoodsIssueController extends Controller
                 &$stockAlerts
             ): GoodsIssue {
                 $issue = GoodsIssue::create([
-                    'issue_number' =>
-                        $this->generateIssueNumber(),
-
                     'user_id' => auth()->id(),
-
-                    'destination' =>
-                        $validated['destination'],
-
-                    'issued_at' =>
-                        $validated['issued_at'],
-
-                    'note' =>
-                        $validated['note'] ?? null,
+                    'destination' => $validated['destination'],
+                    'issued_at' => $validated['issued_at'],
+                    'note' => $validated['note'] ?? null,
                 ]);
 
                 foreach (
@@ -161,9 +141,7 @@ class GoodsIssueController extends Controller
                 ) {
                     $item = Item::query()
                         ->lockForUpdate()
-                        ->findOrFail(
-                            $detail['item_id']
-                        );
+                        ->findOrFail($detail['item_id']);
 
                     $requestedQuantity =
                         (int) $detail['quantity'];
@@ -171,13 +149,7 @@ class GoodsIssueController extends Controller
                     $previousStock =
                         (int) $item->stock;
 
-                    /**
-                     * Mencegah pengeluaran melebihi stok.
-                     */
-                    if (
-                        $requestedQuantity
-                        > $previousStock
-                    ) {
+                    if ($requestedQuantity > $previousStock) {
                         throw ValidationException::withMessages([
                             "items.$index.quantity" =>
                                 "Stok {$item->name} hanya tersedia "
@@ -185,12 +157,8 @@ class GoodsIssueController extends Controller
                         ]);
                     }
 
-                    /**
-                     * Menghitung stok setelah pengeluaran.
-                     */
                     $currentStock =
-                        $previousStock
-                        - $requestedQuantity;
+                        $previousStock - $requestedQuantity;
 
                     $previousStatus =
                         $this->determineStockStatus(
@@ -204,24 +172,14 @@ class GoodsIssueController extends Controller
                             (int) $item->minimum_stock
                         );
 
-                    /**
-                     * Menyimpan detail barang keluar.
-                     */
                     $issue->details()->create([
                         'item_id' => $item->id,
-                        'quantity' =>
-                            $requestedQuantity,
+                        'quantity' => $requestedQuantity,
                     ]);
 
-                    /**
-                     * Memperbarui stok barang.
-                     */
                     $item->stock = $currentStock;
                     $item->save();
 
-                    /**
-                     * Menambahkan peringatan jika kondisi stok memburuk.
-                     */
                     if (
                         $this->shouldSendStockAlert(
                             $previousStatus,
@@ -230,13 +188,10 @@ class GoodsIssueController extends Controller
                     ) {
                         $stockAlerts[] = [
                             'item_id' => $item->id,
-                            'code' => $item->code,
                             'name' => $item->name,
                             'unit' => $item->unit,
-                            'previous_stock' =>
-                                $previousStock,
-                            'current_stock' =>
-                                $currentStock,
+                            'previous_stock' => $previousStock,
+                            'current_stock' => $currentStock,
                             'minimum_stock' =>
                                 (int) $item->minimum_stock,
                             'status' => $currentStatus,
@@ -249,53 +204,37 @@ class GoodsIssueController extends Controller
             3
         );
 
-        /**
-         * Memuat relasi yang diperlukan notifikasi transaksi.
-         */
         $issue->load([
             'user:id,name',
             'details',
         ]);
 
-        $transactionNotificationQueued =
-            $this->queueGoodsIssueNotification(
-                $issue
-            );
+        $transactionNotificationProcessed =
+            $this->queueGoodsIssueNotification($issue);
 
-        $stockAlertQueued =
+        $stockAlertProcessed =
             $this->queueStockAlertNotification(
                 $stockAlerts,
                 $issue
             );
 
         if (
-            $transactionNotificationQueued
-            && $stockAlertQueued
+            ! $transactionNotificationProcessed
+            || ! $stockAlertProcessed
         ) {
-            $message =
-                'Transaksi barang keluar berhasil disimpan ';
-
-            if ($stockAlerts !== []) {
-                $message .=
-                    ' Peringatan stok menipis atau habis ';
-            }
-
             return redirect()
-                ->route(
-                    'goods-issues.show',
-                    $issue
-                )
-                ->with('success', $message);
+                ->route('goods-issues.show', $issue)
+                ->with(
+                    'error',
+                    'Transaksi barang keluar berhasil disimpan, tetapi terdapat notifikasi email yang gagal diproses.'
+                );
         }
 
         return redirect()
-            ->route(
-                'goods-issues.show',
-                $issue
-            )
+            ->route('goods-issues.show', $issue)
             ->with(
-                'error',
-                'Transaksi barang keluar berhasil disimpan, tetapi terdapat notifikasi email yang gagal diproses.'
+                'success',
+                'Transaksi barang keluar berhasil disimpan.'
             );
     }
 
@@ -321,44 +260,13 @@ class GoodsIssueController extends Controller
     }
 
     /**
-     * Membuat nomor transaksi barang keluar.
-     */
-    private function generateIssueNumber(): string
-    {
-        $date = now()->format('Ymd');
-        $prefix = 'BK-' . $date . '-';
-
-        $lastNumber = GoodsIssue::query()
-            ->where(
-                'issue_number',
-                'like',
-                $prefix . '%'
-            )
-            ->lockForUpdate()
-            ->orderByDesc('issue_number')
-            ->value('issue_number');
-
-        $nextSequence = $lastNumber
-            ? ((int) substr($lastNumber, -4)) + 1
-            : 1;
-
-        return $prefix . str_pad(
-            (string) $nextSequence,
-            4,
-            '0',
-            STR_PAD_LEFT
-        );
-    }
-
-    /**
      * Memasukkan notifikasi barang keluar ke antrean.
      */
     private function queueGoodsIssueNotification(
         GoodsIssue $issue
     ): bool {
         try {
-            $recipients =
-                $this->getTransactionNotificationRecipients();
+            $recipients = $this->getNotificationRecipients();
 
             if ($recipients->isEmpty()) {
                 Log::warning(
@@ -373,21 +281,17 @@ class GoodsIssueController extends Controller
 
             Notification::send(
                 $recipients,
-                new GoodsIssueCreatedNotification(
-                    $issue
-                )
+                new GoodsIssueCreatedNotification($issue)
             );
 
             return true;
         } catch (Throwable $exception) {
             Log::error(
-                'Notifikasi barang keluar gagal dimasukkan ke antrean.',
+                'Notifikasi barang keluar gagal diproses.',
                 [
                     'issue_id' => $issue->id,
-                    'exception_class' =>
-                        $exception::class,
-                    'message' =>
-                        $exception->getMessage(),
+                    'exception_class' => $exception::class,
+                    'message' => $exception->getMessage(),
                 ]
             );
 
@@ -406,16 +310,12 @@ class GoodsIssueController extends Controller
         array $stockAlerts,
         GoodsIssue $issue
     ): bool {
-        /**
-         * Tidak perlu mengirim email jika stok masih aman.
-         */
         if ($stockAlerts === []) {
             return true;
         }
 
         try {
-            $recipients =
-                $this->getHeadWarehouseRecipients();
+            $recipients = $this->getNotificationRecipients();
 
             if ($recipients->isEmpty()) {
                 Log::warning(
@@ -432,8 +332,8 @@ class GoodsIssueController extends Controller
                 $recipients,
                 new StockAlertNotification(
                     $stockAlerts,
-                    'Barang Keluar '
-                        . $issue->issue_number,
+                    'Barang keluar tanggal '
+                        . $issue->issued_at->format('d/m/Y'),
                     $issue->user->name
                 )
             );
@@ -441,13 +341,11 @@ class GoodsIssueController extends Controller
             return true;
         } catch (Throwable $exception) {
             Log::error(
-                'Peringatan stok gagal dimasukkan ke antrean.',
+                'Peringatan stok gagal diproses.',
                 [
                     'issue_id' => $issue->id,
-                    'exception_class' =>
-                        $exception::class,
-                    'message' =>
-                        $exception->getMessage(),
+                    'exception_class' => $exception::class,
+                    'message' => $exception->getMessage(),
                 ]
             );
 
@@ -458,39 +356,11 @@ class GoodsIssueController extends Controller
     }
 
     /**
-     * Mendapatkan kepala gudang dan pembuat transaksi.
+     * Mendapatkan seluruh pengguna penerima notifikasi.
      */
-    private function getTransactionNotificationRecipients()
+    private function getNotificationRecipients(): Collection
     {
         return User::query()
-            ->whereNotNull('email')
-            ->where('email', '!=', '')
-            ->where('email', 'not like', '%.test')
-            ->where(
-                function ($query): void {
-                    $query
-                        ->where(
-                            'role',
-                            'kepala_gudang'
-                        )
-                        ->orWhere(
-                            'id',
-                            auth()->id()
-                        );
-                }
-            )
-            ->get()
-            ->unique('email')
-            ->values();
-    }
-
-    /**
-     * Mendapatkan seluruh kepala gudang.
-     */
-    private function getHeadWarehouseRecipients()
-    {
-        return User::query()
-            ->where('role', 'kepala_gudang')
             ->whereNotNull('email')
             ->where('email', '!=', '')
             ->where('email', 'not like', '%.test')
@@ -518,11 +388,10 @@ class GoodsIssueController extends Controller
     }
 
     /**
-     * Menentukan tingkat keparahan status stok.
+     * Menentukan tingkat kondisi stok.
      */
-    private function getStockSeverity(
-        string $status
-    ): int {
+    private function getStockSeverity(string $status): int
+    {
         return match ($status) {
             'out' => 2,
             'low' => 1,
@@ -531,7 +400,7 @@ class GoodsIssueController extends Controller
     }
 
     /**
-     * Memeriksa apakah kondisi stok memburuk.
+     * Memeriksa apakah status stok memburuk.
      */
     private function shouldSendStockAlert(
         string $previousStatus,

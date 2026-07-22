@@ -10,7 +10,6 @@ class Item extends Model
 {
     protected $fillable = [
         'category_id',
-        'code',
         'name',
         'unit',
         'purchase_price',
@@ -19,23 +18,39 @@ class Item extends Model
         'description',
     ];
 
+    /**
+     * Mengubah atribut model ke tipe data yang sesuai.
+     */
+    protected function casts(): array
+    {
+        return [
+            'purchase_price' => 'decimal:2',
+            'stock' => 'integer',
+            'minimum_stock' => 'integer',
+        ];
+    }
+
+    /**
+     * Mendapatkan kategori barang.
+     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * Mendapatkan detail transaksi barang masuk.
+     */
     public function receiptDetails(): HasMany
     {
         return $this->hasMany(GoodsReceiptDetail::class);
     }
 
+    /**
+     * Mendapatkan detail transaksi barang keluar.
+     */
     public function issueDetails(): HasMany
     {
         return $this->hasMany(GoodsIssueDetail::class);
-    }
-
-    public function stockOpnames(): HasMany
-    {
-        return $this->hasMany(StockOpname::class);
     }
 }

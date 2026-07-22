@@ -7,9 +7,12 @@ use Illuminate\Database\Seeder;
 
 class SupplierSeeder extends Seeder
 {
+    /**
+     * Menambahkan data awal supplier.
+     */
     public function run(): void
     {
-        Supplier::insert([
+        $suppliers = [
             [
                 'name' => 'PT Sumber Jaya',
                 'phone' => '081234567890',
@@ -28,6 +31,23 @@ class SupplierSeeder extends Seeder
                 'email' => 'supplier3@mail.com',
                 'address' => 'Banjarmasin',
             ],
-        ]);
+        ];
+
+        /**
+         * Memperbarui supplier berdasarkan email
+         * atau membuat data baru jika belum tersedia.
+         */
+        foreach ($suppliers as $supplier) {
+            Supplier::updateOrCreate(
+                [
+                    'email' => $supplier['email'],
+                ],
+                [
+                    'name' => $supplier['name'],
+                    'phone' => $supplier['phone'],
+                    'address' => $supplier['address'],
+                ]
+            );
+        }
     }
 }
