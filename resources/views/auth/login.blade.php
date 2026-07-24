@@ -42,7 +42,7 @@
             >
                 <div class="text-center">
                     <h2 class="text-2xl font-bold text-slate-800">
-                        Sistem Inventory Gudang
+                        Gudang
                     </h2>
 
                     <p class="mt-2 text-sm leading-6 text-slate-500">
