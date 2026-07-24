@@ -31,6 +31,9 @@
 
         </div>
     </div>
+    {{-- Modal global aplikasi. --}}
+    @include('partials.app_modal')
+
     {{-- Memuat JavaScript tambahan dari halaman tertentu. --}}
     @stack('scripts')
 </body>

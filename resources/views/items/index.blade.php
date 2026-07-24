@@ -382,13 +382,11 @@
                                         {{-- Form hapus barang. --}}
                                         <form
                                             method="POST"
-                                            action="{{ route(
-                                                'items.destroy',
-                                                $item
-                                            ) }}"
-                                            onsubmit="return confirm(
-                                                'Apakah Anda yakin ingin menghapus barang ini?'
-                                            )"
+                                            action="{{ route('items.destroy', $item) }}"
+                                            data-confirm="Barang ini akan dihapus dari sistem. Apakah Anda yakin ingin melanjutkan?"
+                                            data-confirm-title="Hapus Barang"
+                                            data-confirm-type="danger"
+                                            data-confirm-button="Ya, Hapus"
                                         >
                                             @csrf
                                             @method('DELETE')
@@ -396,12 +394,9 @@
                                             <button
                                                 type="submit"
                                                 title="Hapus barang"
-                                                class="inline-flex h-9 w-9
-                                                    items-center
-                                                    justify-center rounded-lg
-                                                    bg-red-100 text-red-700
-                                                    transition
-                                                    hover:bg-red-200"
+                                                class="inline-flex h-9 w-9 items-center
+                                                    justify-center rounded-lg bg-red-100
+                                                    text-red-700 transition hover:bg-red-200"
                                             >
                                                 <i class="bi bi-trash"></i>
                                             </button>

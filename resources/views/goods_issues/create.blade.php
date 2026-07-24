@@ -547,9 +547,14 @@
                 );
 
                 if (rows.length <= 1) {
-                    alert('Minimal satu barang harus tersedia.');
-
-                    return;
+                    window.appAlert(
+                        'Minimal satu barang harus tersedia dalam transaksi.',
+                        {
+                            title: 'Baris Tidak Dapat Dihapus',
+                            type: 'warning',
+                            confirmText: 'Mengerti',
+                        }
+                    );
                 }
 
                 event.currentTarget

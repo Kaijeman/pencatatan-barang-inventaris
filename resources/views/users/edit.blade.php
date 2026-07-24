@@ -59,9 +59,11 @@
                 method="POST"
                 action="{{ route('users.destroy', $user) }}"
                 class="mt-5"
-                onsubmit="return confirm(
-                    'Apakah Anda yakin ingin menghapus akun ini?'
-                )"
+                data-confirm="Akun Anda akan dinonaktifkan dan Anda akan langsung keluar dari aplikasi. Riwayat transaksi tetap tersimpan. Apakah Anda yakin?"
+                data-confirm-title="Hapus Akun Saya"
+                data-confirm-type="danger"
+                data-confirm-button="Ya, Hapus Akun"
+                data-cancel-button="Batalkan"
             >
                 @csrf
                 @method('DELETE')

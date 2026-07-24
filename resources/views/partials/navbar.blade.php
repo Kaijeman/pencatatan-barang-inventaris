@@ -92,20 +92,21 @@
             <form
                 method="POST"
                 action="{{ route('logout') }}"
-                onsubmit="return confirm(
-                    'Apakah Anda yakin ingin keluar dari aplikasi?'
-                )"
+                data-confirm="Apakah Anda yakin ingin keluar dari aplikasi?"
+                data-confirm-title="Konfirmasi Logout"
+                data-confirm-type="warning"
+                data-confirm-button="Ya, Keluar"
+                data-cancel-button="Tetap Masuk"
             >
                 @csrf
 
                 <button
                     type="submit"
                     title="Keluar dari aplikasi"
-                    class="inline-flex items-center justify-center
-                        gap-2 rounded-lg border border-red-200
-                        bg-red-50 px-3 py-2.5 text-sm
-                        font-semibold text-red-700 transition
-                        hover:border-red-300 hover:bg-red-100
+                    class="inline-flex items-center justify-center gap-2
+                        rounded-lg border border-red-200 bg-red-50
+                        px-3 py-2.5 text-sm font-semibold text-red-700
+                        transition hover:border-red-300 hover:bg-red-100
                         sm:px-4"
                 >
                     <i class="bi bi-box-arrow-right text-base"></i>
