@@ -44,7 +44,7 @@
                     class="truncate text-base font-bold
                         text-slate-800 sm:text-lg"
                 >
-                    Sistem Inventory Gudang
+                    Sistem Gudang
                 </h1>
 
                 <p

@@ -20,7 +20,7 @@
                 </p>
 
                 <h1 class="mt-1 text-2xl font-bold text-slate-800">
-                    Dashboard Inventaris
+                    Dashboard
                 </h1>
 
                 <p class="mt-1 text-sm text-slate-500">
