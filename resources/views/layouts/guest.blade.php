@@ -14,7 +14,7 @@
     >
 
     <title>
-        @yield('title', 'Login') - Sistem Inventory Gudang
+        @yield('title', 'Login') - {{ config('app.name') }}
     </title>
 
     {{-- Font aplikasi. --}}

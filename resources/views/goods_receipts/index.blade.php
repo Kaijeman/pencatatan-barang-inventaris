@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Barang Masuk')
+
 @section('content')
     <div class="space-y-6">
 

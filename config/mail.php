@@ -115,4 +115,14 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Email Logo URL
+    |--------------------------------------------------------------------------
+    |
+    | URL publik logo yang ditampilkan pada template email aplikasi.
+    |
+    */
+
+    'logo_url' => env('MAIL_LOGO_URL'),
 ];
