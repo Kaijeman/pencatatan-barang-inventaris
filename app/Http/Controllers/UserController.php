@@ -7,17 +7,28 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
     /**
-     * Menampilkan daftar pengguna.
+     * Menampilkan daftar pengguna aktif.
      */
     public function index(Request $request): View
     {
-        $search = trim((string) $request->input('search'));
+        $validated = $request->validate([
+            'search' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+        ]);
+
+        $search = trim(
+            (string) ($validated['search'] ?? '')
+        );
 
         $users = User::query()
             ->when(
@@ -78,25 +89,29 @@ class UserController extends Controller
             ->route('users.index')
             ->with(
                 'success',
-                'Pengguna berhasil ditambahkan.'
+                'Pengguna baru berhasil ditambahkan.'
             );
     }
 
     /**
-     * Menampilkan form edit pengguna.
+     * Menampilkan form edit akun sendiri.
      */
     public function edit(User $user): View
     {
+        $this->ensureOwnAccount($user);
+
         return view('users.edit', compact('user'));
     }
 
     /**
-     * Memperbarui pengguna.
+     * Memperbarui akun sendiri.
      */
     public function update(
         UpdateUserRequest $request,
         User $user
     ): RedirectResponse {
+        $this->ensureOwnAccount($user);
+
         $validated = $request->validated();
 
         $data = [
@@ -104,6 +119,9 @@ class UserController extends Controller
             'email' => $validated['email'],
         ];
 
+        /**
+         * Memperbarui password hanya jika diisi.
+         */
         if (! empty($validated['password'])) {
             $data['password'] = Hash::make(
                 $validated['password']
@@ -113,47 +131,81 @@ class UserController extends Controller
         $user->update($data);
 
         return redirect()
-            ->route('users.index')
+            ->route('users.edit', $user)
             ->with(
                 'success',
-                'Pengguna berhasil diperbarui.'
+                'Akun berhasil diperbarui.'
             );
     }
 
     /**
-     * Menghapus pengguna.
+     * Menghapus akun sendiri menggunakan soft delete.
      */
-    public function destroy(User $user): RedirectResponse
-    {
-        if ($user->is(auth()->user())) {
-            return redirect()
-                ->route('users.index')
-                ->with(
-                    'error',
-                    'Akun yang sedang digunakan tidak dapat dihapus.'
-                );
+    public function destroy(
+        Request $request,
+        User $user
+    ): RedirectResponse {
+        $this->ensureOwnAccount($user);
+
+        /**
+         * Memastikan password yang dimasukkan
+         * adalah password akun yang sedang login.
+         */
+        $request->validate(
+            [
+                'current_password' => [
+                    'required',
+                    'current_password',
+                ],
+            ],
+            [
+                'current_password.required' =>
+                    'Password saat ini wajib diisi.',
+
+                'current_password.current_password' =>
+                    'Password yang dimasukkan tidak sesuai.',
+            ]
+        );
+
+        /**
+         * Mencegah seluruh akun aktif habis.
+         */
+        if (User::query()->count() <= 1) {
+            return back()
+                ->withErrors([
+                    'current_password' =>
+                        'Akun terakhir dalam sistem tidak dapat dihapus.',
+                ]);
         }
 
-        $hasTransactionHistory =
-            $user->goodsReceipts()->exists()
-            || $user->goodsIssues()->exists();
-
-        if ($hasTransactionHistory) {
-            return redirect()
-                ->route('users.index')
-                ->with(
-                    'error',
-                    'Pengguna tidak dapat dihapus karena memiliki riwayat transaksi.'
-                );
-        }
-
+        /**
+         * Menonaktifkan akun tanpa menghapus
+         * riwayat transaksi pengguna.
+         */
         $user->delete();
 
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()
-            ->route('users.index')
+            ->route('login')
             ->with(
-                'success',
-                'Pengguna berhasil dihapus.'
+                'status',
+                'Akun Anda berhasil dihapus.'
             );
+    }
+
+    /**
+     * Memastikan pengguna hanya mengelola akunnya sendiri.
+     */
+    private function ensureOwnAccount(User $user): void
+    {
+        abort_unless(
+            auth()->id() === $user->id,
+            403,
+            'Anda hanya dapat mengelola akun sendiri.'
+        );
     }
 }

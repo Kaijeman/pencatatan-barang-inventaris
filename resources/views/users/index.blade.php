@@ -14,7 +14,8 @@
                 </h1>
 
                 <p class="mt-1 text-sm text-slate-500">
-                    Kelola seluruh akun pengguna sistem inventaris.
+                    Lihat pengguna, tambahkan akun baru,
+                    dan kelola akun Anda sendiri.
                 </p>
             </div>
 
@@ -62,7 +63,6 @@
                     class="grid grid-cols-1 gap-4
                         lg:grid-cols-4 lg:items-end"
                 >
-                    {{-- Pencarian pengguna. --}}
                     <div class="lg:col-span-3">
                         <label
                             for="search"
@@ -92,7 +92,6 @@
                         @enderror
                     </div>
 
-                    {{-- Tombol pencarian. --}}
                     <div class="flex gap-2">
                         <button
                             type="submit"
@@ -114,16 +113,6 @@
                         </a>
                     </div>
                 </form>
-
-                {{-- Keterangan pencarian aktif. --}}
-                @if ($search !== '')
-                    <div
-                        class="mt-4 rounded-lg border border-blue-100
-                            bg-blue-50 px-4 py-3 text-sm text-blue-700"
-                    >
-                        Menampilkan pengguna yang sesuai dengan pencarian.
-                    </div>
-                @endif
             </div>
 
             {{-- Tabel pengguna. --}}
@@ -160,9 +149,8 @@
                             </th>
 
                             <th
-                                class="w-32 px-5 py-3 text-center
-                                    text-xs font-semibold uppercase
-                                    text-slate-500"
+                                class="w-40 px-5 py-3 text-center text-xs
+                                    font-semibold uppercase text-slate-500"
                             >
                                 Aksi
                             </th>
@@ -194,7 +182,11 @@
                                                 text-blue-700"
                                         >
                                             {{ strtoupper(
-                                                substr($user->name, 0, 1)
+                                                mb_substr(
+                                                    $user->name,
+                                                    0,
+                                                    1
+                                                )
                                             ) }}
                                         </div>
 
@@ -229,7 +221,7 @@
                                     {{ $user->email }}
                                 </td>
 
-                                {{-- Tanggal pembuatan. --}}
+                                {{-- Tanggal dibuat. --}}
                                 <td
                                     class="whitespace-nowrap px-5 py-4
                                         text-sm text-slate-600"
@@ -239,17 +231,18 @@
                                     ) ?? '-' }}
                                 </td>
 
-                                {{-- Tombol aksi. --}}
-                                <td class="whitespace-nowrap px-5 py-4">
-                                    <div class="flex justify-center gap-2">
-
-                                        {{-- Tombol edit. --}}
+                                {{-- Aksi pengguna. --}}
+                                <td
+                                    class="whitespace-nowrap px-5 py-4
+                                        text-center"
+                                >
+                                    @if ($user->id === auth()->id())
                                         <a
                                             href="{{ route(
                                                 'users.edit',
                                                 $user
                                             ) }}"
-                                            title="Edit pengguna"
+                                            title="Edit akun saya"
                                             class="inline-flex h-9 w-9
                                                 items-center justify-center
                                                 rounded-lg bg-amber-100
@@ -260,41 +253,14 @@
                                                 class="bi bi-pencil-square"
                                             ></i>
                                         </a>
-
-                                        @if ($user->id !== auth()->id())
-                                            {{-- Form hapus pengguna. --}}
-                                            <form
-                                                method="POST"
-                                                action="{{ route(
-                                                    'users.destroy',
-                                                    $user
-                                                ) }}"
-                                                onsubmit="return confirm(
-                                                    'Apakah Anda yakin ingin menghapus pengguna ini?'
-                                                )"
-                                            >
-                                                @csrf
-                                                @method('DELETE')
-
-                                                <button
-                                                    type="submit"
-                                                    title="Hapus pengguna"
-                                                    class="inline-flex h-9
-                                                        w-9 items-center
-                                                        justify-center
-                                                        rounded-lg
-                                                        bg-red-100
-                                                        text-red-700
-                                                        transition
-                                                        hover:bg-red-200"
-                                                >
-                                                    <i
-                                                        class="bi bi-trash"
-                                                    ></i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
+                                    @else
+                                        <span
+                                            class="text-xs
+                                                text-slate-400"
+                                        >
+                                            Tidak tersedia
+                                        </span>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
@@ -313,14 +279,6 @@
                                             text-slate-600"
                                     >
                                         Tidak ada pengguna yang sesuai.
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-sm
-                                            text-slate-400"
-                                    >
-                                        Tambahkan pengguna atau ubah
-                                        pencarian.
                                     </p>
                                 </td>
                             </tr>
