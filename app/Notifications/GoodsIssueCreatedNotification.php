@@ -36,7 +36,7 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Menentukan queue notifikasi.
+     * Menentukan queue untuk setiap channel.
      *
      * @return array<string, string>
      */
@@ -60,8 +60,11 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        /**
+         * Relasi pengguna tidak perlu dimuat karena nama
+         * pencatat sudah disimpan pada recorded_by_name.
+         */
         $this->goodsIssue->loadMissing([
-            'user:id,name',
             'details',
         ]);
 
@@ -69,32 +72,46 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
             ->details
             ->sum('quantity');
 
+        $issuedAt = $this->goodsIssue
+            ->issued_at
+            ?->format('d/m/Y')
+            ?? '-';
+
+        $destination = $this->goodsIssue
+            ->destination
+            ?: 'Tidak dicantumkan';
+
+        $recordedByName = $this->goodsIssue
+            ->recorded_by_name
+            ?: 'Pengguna tidak diketahui';
+
+        $recipientName = $notifiable->name
+            ?? 'Pengguna';
+
         return (new MailMessage)
             ->mailer('smtp')
             ->subject(
                 'Transaksi Barang Keluar - '
-                . $this->goodsIssue
-                    ->issued_at
-                    ->format('d/m/Y')
+                . $issuedAt
             )
-            ->greeting('Halo ' . $notifiable->name . ',')
+            ->greeting(
+                'Halo ' . $recipientName . ','
+            )
             ->line(
                 'Transaksi barang keluar telah berhasil dicatat.'
             )
             ->line(
-                'Tanggal: '
-                . $this->goodsIssue
-                    ->issued_at
-                    ->format('d/m/Y')
+                'Tanggal: ' . $issuedAt
             )
             ->line(
-                'Tujuan: '
-                . $this->goodsIssue->destination
+                'Tujuan: ' . $destination
             )
             ->line(
                 'Jumlah Jenis Barang: '
                 . number_format(
-                    $this->goodsIssue->details->count()
+                    $this->goodsIssue
+                        ->details
+                        ->count()
                 )
             )
             ->line(
@@ -104,7 +121,7 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
             )
             ->line(
                 'Dicatat Oleh: '
-                . $this->goodsIssue->user->name
+                . $recordedByName
             )
             ->action(
                 'Lihat Detail Barang Keluar',
@@ -119,19 +136,28 @@ class GoodsIssueCreatedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * Membuat data notifikasi.
+     * Membuat data representasi notifikasi.
      *
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array
     {
         return [
-            'goods_issue_id' => $this->goodsIssue->id,
+            'goods_issue_id' =>
+                $this->goodsIssue->id,
+
             'issued_at' =>
                 $this->goodsIssue
                     ->issued_at
-                    ->format('Y-m-d'),
-            'destination' => $this->goodsIssue->destination,
+                    ?->format('Y-m-d'),
+
+            'destination' =>
+                $this->goodsIssue->destination,
+
+            'recorded_by_name' =>
+                $this->goodsIssue
+                    ->recorded_by_name
+                ?? 'Pengguna tidak diketahui',
         ];
     }
 }

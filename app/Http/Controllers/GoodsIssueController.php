@@ -118,6 +118,11 @@ class GoodsIssueController extends Controller
         $validated = $request->validated();
 
         /**
+         * Menyimpan pengguna sebelum masuk ke closure transaksi.
+         */
+        $authenticatedUser = $request->user();
+
+        /**
          * Menampung perubahan status stok.
          *
          * @var array<int, array<string, mixed>> $stockAlerts
@@ -127,15 +132,23 @@ class GoodsIssueController extends Controller
         $issue = DB::transaction(
             function () use (
                 $validated,
+                $authenticatedUser,
                 &$stockAlerts
             ): GoodsIssue {
+                /**
+                 * Membuat transaksi barang keluar.
+                 */
                 $issue = GoodsIssue::create([
-                    'user_id' => auth()->id(),
+                    'user_id' => $authenticatedUser->id,
+                    'recorded_by_name' => $authenticatedUser->name,
                     'destination' => $validated['destination'],
                     'issued_at' => $validated['issued_at'],
                     'note' => $validated['note'] ?? null,
                 ]);
 
+                /**
+                 * Menyimpan detail transaksi dan mengurangi stok.
+                 */
                 foreach (
                     $validated['items'] as $index => $detail
                 ) {
@@ -149,6 +162,9 @@ class GoodsIssueController extends Controller
                     $previousStock =
                         (int) $item->stock;
 
+                    /**
+                     * Mencegah pengeluaran melebihi stok.
+                     */
                     if ($requestedQuantity > $previousStock) {
                         throw ValidationException::withMessages([
                             "items.$index.quantity" =>
@@ -172,14 +188,24 @@ class GoodsIssueController extends Controller
                             (int) $item->minimum_stock
                         );
 
+                    /**
+                     * Menyimpan detail barang keluar.
+                     */
                     $issue->details()->create([
                         'item_id' => $item->id,
                         'quantity' => $requestedQuantity,
                     ]);
 
-                    $item->stock = $currentStock;
-                    $item->save();
+                    /**
+                     * Memperbarui stok barang.
+                     */
+                    $item->update([
+                        'stock' => $currentStock,
+                    ]);
 
+                    /**
+                     * Menyimpan perubahan status stok yang memburuk.
+                     */
                     if (
                         $this->shouldSendStockAlert(
                             $previousStatus,

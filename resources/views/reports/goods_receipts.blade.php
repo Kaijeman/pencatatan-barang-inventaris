@@ -427,7 +427,7 @@
                                     class="px-5 py-4 text-sm
                                         text-slate-600"
                                 >
-                                    {{ $receipt->user?->name ?? '-' }}
+                                    {{ $receipt->recorded_by_name ?? 'Pengguna tidak diketahui' }}
                                 </td>
 
                                 {{-- Tombol detail. --}}

@@ -35,5 +35,15 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password'),
             ]
         );
+
+        User::updateOrCreate(
+            [
+                'email' => 'anzy762@gmail.com',
+            ],
+            [
+                'name' => 'Akun Testing',
+                'password' => Hash::make('12345678'),
+            ]
+        );
     }
 }

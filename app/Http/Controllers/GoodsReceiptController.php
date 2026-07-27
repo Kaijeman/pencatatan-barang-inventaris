@@ -45,24 +45,17 @@ class GoodsReceiptController extends Controller
                                     'like',
                                     '%' . $search . '%'
                                 )
+                                ->orWhere(
+                                    'recorded_by_name',
+                                    'like',
+                                    '%' . $search . '%'
+                                )
                                 ->orWhereHas(
                                     'supplier',
                                     function ($supplierQuery) use (
                                         $search
                                     ): void {
                                         $supplierQuery->where(
-                                            'name',
-                                            'like',
-                                            '%' . $search . '%'
-                                        );
-                                    }
-                                )
-                                ->orWhereHas(
-                                    'user',
-                                    function ($userQuery) use (
-                                        $search
-                                    ): void {
-                                        $userQuery->where(
                                             'name',
                                             'like',
                                             '%' . $search . '%'
@@ -76,7 +69,10 @@ class GoodsReceiptController extends Controller
             ->when(
                 $date,
                 function ($query) use ($date): void {
-                    $query->whereDate('received_at', $date);
+                    $query->whereDate(
+                        'received_at',
+                        $date
+                    );
                 }
             )
             ->orderByDesc('received_at')
@@ -127,35 +123,72 @@ class GoodsReceiptController extends Controller
     ): RedirectResponse {
         $validated = $request->validated();
 
+        /**
+         * Menyimpan data pengguna sebelum masuk
+         * ke dalam closure transaksi database.
+         */
+        $authenticatedUser = $request->user();
+
         $receipt = DB::transaction(
-            function () use ($validated): GoodsReceipt {
+            function () use (
+                $validated,
+                $authenticatedUser
+            ): GoodsReceipt {
+                /**
+                 * Membuat transaksi barang masuk.
+                 */
                 $receipt = GoodsReceipt::create([
-                    'supplier_id' => $validated['supplier_id'],
-                    'user_id' => auth()->id(),
-                    'received_at' => $validated['received_at'],
-                    'note' => $validated['note'] ?? null,
+                    'supplier_id' =>
+                        $validated['supplier_id'],
+
+                    'user_id' =>
+                        $authenticatedUser->id,
+
+                    'recorded_by_name' =>
+                        $authenticatedUser->name,
+
+                    'received_at' =>
+                        $validated['received_at'],
+
+                    'note' =>
+                        $validated['note'] ?? null,
                 ]);
 
+                /**
+                 * Menyimpan setiap detail barang masuk.
+                 */
                 foreach ($validated['items'] as $detail) {
                     $item = Item::query()
                         ->lockForUpdate()
                         ->findOrFail($detail['item_id']);
 
-                    $receipt->details()->create([
-                        'item_id' => $item->id,
-                        'quantity' => $detail['quantity'],
-                        'purchase_price' =>
-                            $detail['purchase_price'],
-                    ]);
+                    $quantity =
+                        (int) $detail['quantity'];
 
-                    $item->stock =
-                        (int) $item->stock
-                        + (int) $detail['quantity'];
-
-                    $item->purchase_price =
+                    $purchasePrice =
                         $detail['purchase_price'];
 
-                    $item->save();
+                    /**
+                     * Menyimpan detail barang masuk.
+                     */
+                    $receipt->details()->create([
+                        'item_id' => $item->id,
+                        'quantity' => $quantity,
+                        'purchase_price' => $purchasePrice,
+                    ]);
+
+                    /**
+                     * Menambah stok dan memperbarui
+                     * harga beli terakhir barang.
+                     */
+                    $item->update([
+                        'stock' =>
+                            (int) $item->stock
+                            + $quantity,
+
+                        'purchase_price' =>
+                            $purchasePrice,
+                    ]);
                 }
 
                 return $receipt;
@@ -163,23 +196,19 @@ class GoodsReceiptController extends Controller
             3
         );
 
+        /**
+         * Memuat data yang diperlukan oleh halaman
+         * detail dan notifikasi.
+         */
         $receipt->load([
             'supplier:id,name',
             'user:id,name',
             'details',
         ]);
 
-        $notificationProcessed =
-            $this->queueGoodsReceiptNotification($receipt);
-
-        if (! $notificationProcessed) {
-            return redirect()
-                ->route('goods-receipts.show', $receipt)
-                ->with(
-                    'error',
-                    'Transaksi barang masuk berhasil disimpan, tetapi notifikasi email gagal diproses.'
-                );
-        }
+        $this->queueGoodsReceiptNotification(
+            $receipt
+        );
 
         return redirect()
             ->route('goods-receipts.show', $receipt)
@@ -229,7 +258,8 @@ class GoodsReceiptController extends Controller
         GoodsReceipt $receipt
     ): bool {
         try {
-            $recipients = $this->getNotificationRecipients();
+            $recipients =
+                $this->getNotificationRecipients();
 
             if ($recipients->isEmpty()) {
                 Log::warning(
@@ -244,7 +274,9 @@ class GoodsReceiptController extends Controller
 
             Notification::send(
                 $recipients,
-                new GoodsReceiptCreatedNotification($receipt)
+                new GoodsReceiptCreatedNotification(
+                    $receipt
+                )
             );
 
             return true;
@@ -253,8 +285,10 @@ class GoodsReceiptController extends Controller
                 'Notifikasi barang masuk gagal diproses.',
                 [
                     'receipt_id' => $receipt->id,
-                    'exception_class' => $exception::class,
-                    'message' => $exception->getMessage(),
+                    'exception_class' =>
+                        $exception::class,
+                    'message' =>
+                        $exception->getMessage(),
                 ]
             );
 

@@ -139,7 +139,7 @@ class UserController extends Controller
     }
 
     /**
-     * Menghapus akun sendiri menggunakan soft delete.
+     * Menghapus akun sendiri secara permanen.
      */
     public function destroy(
         Request $request,
@@ -147,10 +147,6 @@ class UserController extends Controller
     ): RedirectResponse {
         $this->ensureOwnAccount($user);
 
-        /**
-         * Memastikan password yang dimasukkan
-         * adalah password akun yang sedang login.
-         */
         $request->validate(
             [
                 'current_password' => [
@@ -168,19 +164,17 @@ class UserController extends Controller
         );
 
         /**
-         * Mencegah seluruh akun aktif habis.
+         * Mencegah sistem kehilangan seluruh akun pengguna.
          */
         if (User::query()->count() <= 1) {
-            return back()
-                ->withErrors([
-                    'current_password' =>
-                        'Akun terakhir dalam sistem tidak dapat dihapus.',
-                ]);
+            return back()->withErrors([
+                'current_password' =>
+                    'Akun terakhir dalam sistem tidak dapat dihapus.',
+            ]);
         }
 
         /**
-         * Menonaktifkan akun tanpa menghapus
-         * riwayat transaksi pengguna.
+         * Menghapus pengguna secara permanen.
          */
         $user->delete();
 
@@ -193,7 +187,7 @@ class UserController extends Controller
             ->route('login')
             ->with(
                 'status',
-                'Akun Anda berhasil dihapus.'
+                'Akun berhasil dihapus secara permanen.'
             );
     }
 

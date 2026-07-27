@@ -351,7 +351,7 @@
                                     class="px-5 py-4 text-sm
                                         text-slate-600"
                                 >
-                                    {{ $issue->user?->name ?? '-' }}
+                                    {{ $issue->recorded_by_name ?? 'Pengguna tidak diketahui' }}
                                 </td>
 
                                 {{-- Tombol detail. --}}

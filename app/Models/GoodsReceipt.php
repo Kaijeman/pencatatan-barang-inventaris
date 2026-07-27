@@ -13,6 +13,7 @@ class GoodsReceipt extends Model
         'user_id',
         'received_at',
         'note',
+        'recorded_by_name',
     ];
 
     /**
@@ -38,8 +39,8 @@ class GoodsReceipt extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class)
-            ->withTrashed();
+        return $this->belongsTo(User::class);
+            // ->withTrashed();
     }
 
     /**

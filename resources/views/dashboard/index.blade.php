@@ -37,9 +37,9 @@
                     {{ auth()->user()->name }}
                 </div>
 
-                <div>
+                <!-- <div>
                     Pengguna Sistem
-                </div>
+                </div> -->
 
                 <div class="mt-1 text-xs text-slate-500">
                     {{ now()->format('d/m/Y') }}
@@ -463,7 +463,7 @@
                                                 text-slate-500"
                                         >
                                             Dicatat oleh
-                                            {{ $receipt->user?->name ?? '-' }}
+                                            {{ $receipt->recorded_by_name ?? 'Pengguna tidak diketahui' }}
                                         </div>
                                     </td>
 
@@ -590,7 +590,7 @@
                                                 text-slate-500"
                                         >
                                             Dicatat oleh
-                                            {{ $issue->user?->name ?? '-' }}
+                                            {{ $issue->recorded_by_name ?? 'Pengguna tidak diketahui' }}
                                         </div>
                                     </td>
 

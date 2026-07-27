@@ -82,9 +82,9 @@
                         {{ $authenticatedUser->name }}
                     </p>
 
-                    <p class="truncate text-xs text-slate-500">
+                    <!-- <p class="truncate text-xs text-slate-500">
                         Pengguna Sistem
-                    </p>
+                    </p> -->
                 </div>
             </div>
 
