@@ -9,7 +9,7 @@
             border-b border-slate-700"
     >
         <span class="text-xl font-bold">
-            Options
+            Gudang
         </span>
     </div>
 
