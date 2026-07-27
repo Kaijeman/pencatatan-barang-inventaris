@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Supplier')
+
 @section('content')
     <div class="space-y-6">
 
@@ -182,17 +184,24 @@
                                         </a>
 
                                         {{-- Form hapus supplier --}}
-                                        <form method="POST"
-                                              action="{{ route('suppliers.destroy', $supplier) }}"
-                                              onsubmit="return confirm('Apakah Anda yakin ingin menghapus supplier ini?')">
-
+                                        <form
+                                            method="POST"
+                                            action="{{ route('suppliers.destroy', $supplier) }}"
+                                            data-confirm="Supplier ini akan dihapus. Apakah Anda yakin?"
+                                            data-confirm-title="Hapus Supplier"
+                                            data-confirm-type="danger"
+                                            data-confirm-button="Ya, Hapus"
+                                        >
                                             @csrf
                                             @method('DELETE')
 
-                                            <button type="submit"
-                                                    title="Hapus supplier"
-                                                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-700 transition hover:bg-red-200">
-
+                                            <button
+                                                type="submit"
+                                                title="Hapus supplier"
+                                                class="inline-flex h-9 w-9 items-center
+                                                    justify-center rounded-lg bg-red-100
+                                                    text-red-700 transition hover:bg-red-200"
+                                            >
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>

@@ -5,7 +5,7 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
-    <title>{{ config('app.name', 'Inventory') }}</title>
+    <title>@hasSection('title')@yield('title') - @endif{{ config('app.name') }}</title>
 
     @vite([
         'resources/css/app.css',
@@ -31,6 +31,9 @@
 
         </div>
     </div>
+    {{-- Modal global aplikasi. --}}
+    @include('partials.app_modal')
+
     {{-- Memuat JavaScript tambahan dari halaman tertentu. --}}
     @stack('scripts')
 </body>

@@ -22,7 +22,7 @@ class ItemController extends Controller
         $stockStatus = $request->input('stock_status');
 
         $items = Item::query()
-            ->with('category')
+            ->with('category:id,name')
             ->when(
                 $search !== '',
                 function ($query) use ($search): void {
@@ -30,11 +30,6 @@ class ItemController extends Controller
                         function ($query) use ($search): void {
                             $query
                                 ->where(
-                                    'code',
-                                    'like',
-                                    '%' . $search . '%'
-                                )
-                                ->orWhere(
                                     'name',
                                     'like',
                                     '%' . $search . '%'
@@ -63,10 +58,7 @@ class ItemController extends Controller
             ->when(
                 $categoryId,
                 function ($query) use ($categoryId): void {
-                    $query->where(
-                        'category_id',
-                        $categoryId
-                    );
+                    $query->where('category_id', $categoryId);
                 }
             )
             ->when(
@@ -129,9 +121,7 @@ class ItemController extends Controller
                 'name',
             ]);
 
-        return view('items.create', compact(
-            'categories'
-        ));
+        return view('items.create', compact('categories'));
     }
 
     /**
@@ -140,20 +130,9 @@ class ItemController extends Controller
     public function store(
         StoreItemRequest $request
     ): RedirectResponse {
-        $validated = $request->validated();
-
         Item::create([
-            'category_id' => $validated['category_id'],
-            'code' => $validated['code'],
-            'name' => $validated['name'],
-            'unit' => $validated['unit'],
-            'purchase_price' =>
-                $validated['purchase_price'],
+            ...$request->validated(),
             'stock' => 0,
-            'minimum_stock' =>
-                $validated['minimum_stock'],
-            'description' =>
-                $validated['description'] ?? null,
         ]);
 
         return redirect()
@@ -204,26 +183,19 @@ class ItemController extends Controller
      */
     public function destroy(Item $item): RedirectResponse
     {
-        /**
-         * Memeriksa riwayat transaksi barang.
-         */
         $hasTransactionHistory =
             $item->receiptDetails()->exists()
-            || $item->issueDetails()->exists()
-            || $item->stockOpnames()->exists();
+            || $item->issueDetails()->exists();
 
         if ($hasTransactionHistory) {
             return redirect()
                 ->route('items.index')
                 ->with(
                     'error',
-                    'Barang tidak dapat dihapus karena sudah memiliki riwayat transaksi.'
+                    'Barang tidak dapat dihapus karena memiliki riwayat transaksi.'
                 );
         }
 
-        /**
-         * Mencegah barang dengan stok tersisa dihapus.
-         */
         if ((int) $item->stock > 0) {
             return redirect()
                 ->route('items.index')

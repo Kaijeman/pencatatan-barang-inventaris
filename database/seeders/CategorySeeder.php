@@ -7,6 +7,9 @@ use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
+    /**
+     * Menambahkan data awal kategori barang.
+     */
     public function run(): void
     {
         $categories = [
@@ -17,9 +20,13 @@ class CategorySeeder extends Seeder
             'Peralatan',
         ];
 
-        foreach ($categories as $category) {
-            Category::create([
-                'name' => $category,
+        /**
+         * Menggunakan firstOrCreate agar kategori
+         * tidak terduplikasi saat seeder dijalankan ulang.
+         */
+        foreach ($categories as $categoryName) {
+            Category::firstOrCreate([
+                'name' => $categoryName,
             ]);
         }
     }

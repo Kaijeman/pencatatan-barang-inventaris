@@ -13,7 +13,6 @@ use Illuminate\Notifications\Notifiable;
     'name',
     'email',
     'password',
-    'role',
 ])]
 #[Hidden([
     'password',
@@ -25,7 +24,9 @@ class User extends Authenticatable
     use Notifiable;
 
     /**
-     * Mendefinisikan perubahan tipe data atribut.
+     * Menentukan konversi atribut pengguna.
+     *
+     * @return array<string, string>
      */
     protected function casts(): array
     {
@@ -49,13 +50,5 @@ class User extends Authenticatable
     public function goodsIssues(): HasMany
     {
         return $this->hasMany(GoodsIssue::class);
-    }
-
-    /**
-     * Mendapatkan riwayat stock opname pengguna.
-     */
-    public function stockOpnames(): HasMany
-    {
-        return $this->hasMany(StockOpname::class);
     }
 }

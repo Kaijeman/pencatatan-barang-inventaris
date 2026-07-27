@@ -3,21 +3,40 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
 
-return Application::configure(basePath: dirname(__DIR__))
+return Application::configure(
+    basePath: dirname(__DIR__)
+)
+    /**
+     * Memuat route aplikasi.
+     *
+     * Route pada routes/web.php secara otomatis
+     * menggunakan middleware group web.
+     */
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function ($middleware) {
-        $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-        ]);
-    })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
-        );
-    })->create();
+
+    /**
+     * Mengatur middleware aplikasi.
+     *
+     * Middleware role sudah tidak digunakan sehingga
+     * tidak perlu lagi didaftarkan sebagai alias.
+     */
+    ->withMiddleware(
+        function (Middleware $middleware): void {
+            //
+        }
+    )
+
+    /**
+     * Mengatur penanganan exception aplikasi.
+     */
+    ->withExceptions(
+        function (Exceptions $exceptions): void {
+            //
+        }
+    )
+    ->create();

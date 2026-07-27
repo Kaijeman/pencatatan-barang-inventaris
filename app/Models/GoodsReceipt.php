@@ -9,15 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class GoodsReceipt extends Model
 {
     protected $fillable = [
-        'receipt_number',
         'supplier_id',
         'user_id',
         'received_at',
         'note',
+        'recorded_by_name',
     ];
 
     /**
-     * Mengubah tanggal penerimaan menjadi objek tanggal.
+     * Mengubah atribut tanggal ke objek tanggal.
      */
     protected function casts(): array
     {
@@ -27,7 +27,7 @@ class GoodsReceipt extends Model
     }
 
     /**
-     * Mendapatkan supplier transaksi barang masuk.
+     * Mendapatkan supplier transaksi.
      */
     public function supplier(): BelongsTo
     {
@@ -40,10 +40,11 @@ class GoodsReceipt extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+            // ->withTrashed();
     }
 
     /**
-     * Mendapatkan seluruh detail transaksi barang masuk.
+     * Mendapatkan detail barang masuk.
      */
     public function details(): HasMany
     {

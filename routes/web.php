@@ -6,7 +6,6 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\GoodsIssueController;
-use App\Http\Controllers\StockOpnameController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -56,17 +55,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/goods-issues/{goodsIssue}', [GoodsIssueController::class, 'show'])
         ->name('goods-issues.show');
     /**
-     * Route stock opname.
-     */
-    Route::get('/stock-opnames', [StockOpnameController::class, 'index'])
-        ->name('stock-opnames.index');
-    Route::get('/stock-opnames/create', [StockOpnameController::class, 'create'])
-        ->name('stock-opnames.create');
-    Route::post('/stock-opnames', [StockOpnameController::class, 'store'])
-        ->name('stock-opnames.store');
-    Route::get('/stock-opnames/{stockOpname}', [StockOpnameController::class, 'show'])
-        ->name('stock-opnames.show');
-    /**
      * Route laporan stok.
      */
     Route::get('/reports/stock', [ReportController::class, 'stock'])
@@ -90,10 +78,8 @@ Route::middleware(['auth'])->group(function () {
     /**
      * Route manajemen pengguna.
      */
-    Route::middleware('role:kepala_gudang')->group(function () {
-        Route::resource('users', UserController::class)
-            ->except(['show']);
-    });
+    Route::resource('users', UserController::class)
+        ->except(['show',]);
 });
 
 require __DIR__.'/auth.php';

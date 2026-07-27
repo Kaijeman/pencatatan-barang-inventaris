@@ -7,30 +7,28 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
     /**
-     * Menampilkan daftar pengguna.
+     * Menampilkan daftar pengguna aktif.
      */
     public function index(Request $request): View
     {
-        $search = trim((string) $request->input('search'));
-
-        $requestedRole = $request->input('role');
-
-        $role = in_array(
-            $requestedRole,
-            [
-                'kepala_gudang',
-                'staff_gudang',
+        $validated = $request->validate([
+            'search' => [
+                'nullable',
+                'string',
+                'max:150',
             ],
-            true
-        )
-            ? $requestedRole
-            : null;
+        ]);
+
+        $search = trim(
+            (string) ($validated['search'] ?? '')
+        );
 
         $users = User::query()
             ->when(
@@ -53,20 +51,13 @@ class UserController extends Controller
                     );
                 }
             )
-            ->when(
-                $role !== null,
-                function ($query) use ($role): void {
-                    $query->where('role', $role);
-                }
-            )
             ->orderBy('name')
             ->paginate(10)
             ->withQueryString();
 
         return view('users.index', compact(
             'users',
-            'search',
-            'role'
+            'search'
         ));
     }
 
@@ -89,7 +80,6 @@ class UserController extends Controller
         User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
             'password' => Hash::make(
                 $validated['password']
             ),
@@ -99,142 +89,117 @@ class UserController extends Controller
             ->route('users.index')
             ->with(
                 'success',
-                'Pengguna berhasil ditambahkan.'
+                'Pengguna baru berhasil ditambahkan.'
             );
     }
 
     /**
-     * Menampilkan form edit pengguna.
+     * Menampilkan form edit akun sendiri.
      */
     public function edit(User $user): View
     {
+        $this->ensureOwnAccount($user);
+
         return view('users.edit', compact('user'));
     }
 
     /**
-     * Memperbarui pengguna.
+     * Memperbarui akun sendiri.
      */
     public function update(
         UpdateUserRequest $request,
         User $user
     ): RedirectResponse {
+        $this->ensureOwnAccount($user);
+
         $validated = $request->validated();
 
-        /*
-         * Mencegah perubahan role kepala gudang terakhir.
-         */
-        if (
-            $user->role === 'kepala_gudang'
-            && $validated['role'] !== 'kepala_gudang'
-            && $this->isLastHeadWarehouse($user)
-        ) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with(
-                    'error',
-                    'Role tidak dapat diubah karena pengguna ini merupakan kepala gudang terakhir.'
-                );
-        }
-
-        $updateData = [
+        $data = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
         ];
 
-        /*
-         * Memperbarui password hanya ketika password baru diisi.
+        /**
+         * Memperbarui password hanya jika diisi.
          */
         if (! empty($validated['password'])) {
-            $updateData['password'] = Hash::make(
+            $data['password'] = Hash::make(
                 $validated['password']
             );
         }
 
-        $user->update($updateData);
+        $user->update($data);
 
         return redirect()
-            ->route('users.index')
+            ->route('users.edit', $user)
             ->with(
                 'success',
-                'Pengguna berhasil diperbarui.'
+                'Akun berhasil diperbarui.'
             );
     }
 
     /**
-     * Menghapus pengguna.
+     * Menghapus akun sendiri secara permanen.
      */
-    public function destroy(User $user): RedirectResponse
-    {
-        /*
-         * Mencegah pengguna menghapus akun sendiri.
+    public function destroy(
+        Request $request,
+        User $user
+    ): RedirectResponse {
+        $this->ensureOwnAccount($user);
+
+        $request->validate(
+            [
+                'current_password' => [
+                    'required',
+                    'current_password',
+                ],
+            ],
+            [
+                'current_password.required' =>
+                    'Password saat ini wajib diisi.',
+
+                'current_password.current_password' =>
+                    'Password yang dimasukkan tidak sesuai.',
+            ]
+        );
+
+        /**
+         * Mencegah sistem kehilangan seluruh akun pengguna.
          */
-        if ($user->id === auth()->id()) {
-            return redirect()
-                ->route('users.index')
-                ->with(
-                    'error',
-                    'Anda tidak dapat menghapus akun yang sedang digunakan.'
-                );
+        if (User::query()->count() <= 1) {
+            return back()->withErrors([
+                'current_password' =>
+                    'Akun terakhir dalam sistem tidak dapat dihapus.',
+            ]);
         }
 
-        /*
-         * Mencegah penghapusan kepala gudang terakhir.
+        /**
+         * Menghapus pengguna secara permanen.
          */
-        if ($this->isLastHeadWarehouse($user)) {
-            return redirect()
-                ->route('users.index')
-                ->with(
-                    'error',
-                    'Pengguna tidak dapat dihapus karena merupakan kepala gudang terakhir.'
-                );
-        }
-
-        /*
-         * Mencegah penghapusan pengguna yang memiliki riwayat transaksi.
-         */
-        if ($this->hasTransactionHistory($user)) {
-            return redirect()
-                ->route('users.index')
-                ->with(
-                    'error',
-                    'Pengguna tidak dapat dihapus karena memiliki riwayat transaksi.'
-                );
-        }
-
         $user->delete();
 
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()
-            ->route('users.index')
+            ->route('login')
             ->with(
-                'success',
-                'Pengguna berhasil dihapus.'
+                'status',
+                'Akun berhasil dihapus secara permanen.'
             );
     }
 
     /**
-     * Memeriksa apakah pengguna merupakan kepala gudang terakhir.
+     * Memastikan pengguna hanya mengelola akunnya sendiri.
      */
-    private function isLastHeadWarehouse(User $user): bool
+    private function ensureOwnAccount(User $user): void
     {
-        if ($user->role !== 'kepala_gudang') {
-            return false;
-        }
-
-        return User::query()
-            ->where('role', 'kepala_gudang')
-            ->where('id', '!=', $user->id)
-            ->doesntExist();
-    }
-
-    /**
-     * Memeriksa riwayat transaksi pengguna.
-     */
-    private function hasTransactionHistory(User $user): bool
-    {
-        return $user->goodsReceipts()->exists()
-            || $user->goodsIssues()->exists()
-            || $user->stockOpnames()->exists();
+        abort_unless(
+            auth()->id() === $user->id,
+            403,
+            'Anda hanya dapat mengelola akun sendiri.'
+        );
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Notifications\GoodsReceiptCreatedNotification;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,12 @@ class GoodsReceiptController extends Controller
                         function ($query) use ($search): void {
                             $query
                                 ->where(
-                                    'receipt_number',
+                                    'note',
+                                    'like',
+                                    '%' . $search . '%'
+                                )
+                                ->orWhere(
+                                    'recorded_by_name',
                                     'like',
                                     '%' . $search . '%'
                                 )
@@ -50,18 +56,6 @@ class GoodsReceiptController extends Controller
                                         $search
                                     ): void {
                                         $supplierQuery->where(
-                                            'name',
-                                            'like',
-                                            '%' . $search . '%'
-                                        );
-                                    }
-                                )
-                                ->orWhereHas(
-                                    'user',
-                                    function ($userQuery) use (
-                                        $search
-                                    ): void {
-                                        $userQuery->where(
                                             'name',
                                             'like',
                                             '%' . $search . '%'
@@ -109,7 +103,6 @@ class GoodsReceiptController extends Controller
             ->orderBy('name')
             ->get([
                 'id',
-                'code',
                 'name',
                 'unit',
                 'purchase_price',
@@ -123,55 +116,79 @@ class GoodsReceiptController extends Controller
     }
 
     /**
-     * Menyimpan transaksi barang masuk dan menambah stok.
+     * Menyimpan transaksi barang masuk.
      */
     public function store(
         StoreGoodsReceiptRequest $request
     ): RedirectResponse {
         $validated = $request->validated();
 
+        /**
+         * Menyimpan data pengguna sebelum masuk
+         * ke dalam closure transaksi database.
+         */
+        $authenticatedUser = $request->user();
+
         $receipt = DB::transaction(
-            function () use ($validated): GoodsReceipt {
+            function () use (
+                $validated,
+                $authenticatedUser
+            ): GoodsReceipt {
+                /**
+                 * Membuat transaksi barang masuk.
+                 */
                 $receipt = GoodsReceipt::create([
-                    'receipt_number' =>
-                        $this->generateReceiptNumber(),
                     'supplier_id' =>
                         $validated['supplier_id'],
-                    'user_id' => auth()->id(),
+
+                    'user_id' =>
+                        $authenticatedUser->id,
+
+                    'recorded_by_name' =>
+                        $authenticatedUser->name,
+
                     'received_at' =>
                         $validated['received_at'],
+
                     'note' =>
                         $validated['note'] ?? null,
                 ]);
 
+                /**
+                 * Menyimpan setiap detail barang masuk.
+                 */
                 foreach ($validated['items'] as $detail) {
                     $item = Item::query()
                         ->lockForUpdate()
-                        ->findOrFail(
-                            $detail['item_id']
-                        );
+                        ->findOrFail($detail['item_id']);
+
+                    $quantity =
+                        (int) $detail['quantity'];
+
+                    $purchasePrice =
+                        $detail['purchase_price'];
 
                     /**
                      * Menyimpan detail barang masuk.
                      */
                     $receipt->details()->create([
                         'item_id' => $item->id,
-                        'quantity' =>
-                            $detail['quantity'],
-                        'purchase_price' =>
-                            $detail['purchase_price'],
+                        'quantity' => $quantity,
+                        'purchase_price' => $purchasePrice,
                     ]);
 
                     /**
-                     * Menambah stok dan memperbarui harga beli.
+                     * Menambah stok dan memperbarui
+                     * harga beli terakhir barang.
                      */
-                    $item->stock +=
-                        (int) $detail['quantity'];
+                    $item->update([
+                        'stock' =>
+                            (int) $item->stock
+                            + $quantity,
 
-                    $item->purchase_price =
-                        $detail['purchase_price'];
-
-                    $item->save();
+                        'purchase_price' =>
+                            $purchasePrice,
+                    ]);
                 }
 
                 return $receipt;
@@ -180,7 +197,8 @@ class GoodsReceiptController extends Controller
         );
 
         /**
-         * Memuat relasi yang digunakan dalam notifikasi.
+         * Memuat data yang diperlukan oleh halaman
+         * detail dan notifikasi.
          */
         $receipt->load([
             'supplier:id,name',
@@ -188,31 +206,15 @@ class GoodsReceiptController extends Controller
             'details',
         ]);
 
-        $notificationQueued =
-            $this->queueGoodsReceiptNotification(
-                $receipt
-            );
-
-        if ($notificationQueued) {
-            return redirect()
-                ->route(
-                    'goods-receipts.show',
-                    $receipt
-                )
-                ->with(
-                    'success',
-                    'Transaksi barang masuk berhasil disimpan.'
-                );
-        }
+        $this->queueGoodsReceiptNotification(
+            $receipt
+        );
 
         return redirect()
-            ->route(
-                'goods-receipts.show',
-                $receipt
-            )
+            ->route('goods-receipts.show', $receipt)
             ->with(
-                'error',
-                'Transaksi barang masuk berhasil disimpan, tetapi notifikasi email gagal diproses.'
+                'success',
+                'Transaksi barang masuk berhasil disimpan.'
             );
     }
 
@@ -234,48 +236,19 @@ class GoodsReceiptController extends Controller
 
         $totalValue = $goodsReceipt
             ->details
-            ->sum(function ($detail): float {
-                return (float) (
-                    $detail->quantity
-                    * $detail->purchase_price
-                );
-            });
+            ->sum(
+                fn ($detail): float =>
+                    (float) (
+                        $detail->quantity
+                        * $detail->purchase_price
+                    )
+            );
 
         return view('goods_receipts.show', compact(
             'goodsReceipt',
             'totalQuantity',
             'totalValue'
         ));
-    }
-
-    /**
-     * Membuat nomor transaksi barang masuk.
-     */
-    private function generateReceiptNumber(): string
-    {
-        $date = now()->format('Ymd');
-        $prefix = 'BM-' . $date . '-';
-
-        $lastNumber = GoodsReceipt::query()
-            ->where(
-                'receipt_number',
-                'like',
-                $prefix . '%'
-            )
-            ->lockForUpdate()
-            ->orderByDesc('receipt_number')
-            ->value('receipt_number');
-
-        $nextSequence = $lastNumber
-            ? ((int) substr($lastNumber, -4)) + 1
-            : 1;
-
-        return $prefix . str_pad(
-            (string) $nextSequence,
-            4,
-            '0',
-            STR_PAD_LEFT
-        );
     }
 
     /**
@@ -288,9 +261,6 @@ class GoodsReceiptController extends Controller
             $recipients =
                 $this->getNotificationRecipients();
 
-            /**
-             * Menghentikan proses jika tidak ada penerima.
-             */
             if ($recipients->isEmpty()) {
                 Log::warning(
                     'Notifikasi barang masuk tidak memiliki penerima.',
@@ -302,9 +272,6 @@ class GoodsReceiptController extends Controller
                 return false;
             }
 
-            /**
-             * Memasukkan notifikasi ke database queue.
-             */
             Notification::send(
                 $recipients,
                 new GoodsReceiptCreatedNotification(
@@ -315,7 +282,7 @@ class GoodsReceiptController extends Controller
             return true;
         } catch (Throwable $exception) {
             Log::error(
-                'Notifikasi barang masuk gagal dimasukkan ke antrean.',
+                'Notifikasi barang masuk gagal diproses.',
                 [
                     'receipt_id' => $receipt->id,
                     'exception_class' =>
@@ -332,27 +299,14 @@ class GoodsReceiptController extends Controller
     }
 
     /**
-     * Mendapatkan kepala gudang dan pembuat transaksi.
+     * Mendapatkan seluruh pengguna penerima notifikasi.
      */
-    private function getNotificationRecipients()
+    private function getNotificationRecipients(): Collection
     {
         return User::query()
             ->whereNotNull('email')
             ->where('email', '!=', '')
             ->where('email', 'not like', '%.test')
-            ->where(
-                function ($query): void {
-                    $query
-                        ->where(
-                            'role',
-                            'kepala_gudang'
-                        )
-                        ->orWhere(
-                            'id',
-                            auth()->id()
-                        );
-                }
-            )
             ->get()
             ->unique('email')
             ->values();

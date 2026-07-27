@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('title', 'Tambah Supplier')
+
 @section('content')
     <div class="mx-auto max-w-3xl space-y-6">
 
