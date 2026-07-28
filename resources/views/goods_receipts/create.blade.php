@@ -162,7 +162,7 @@
                         id="note"
                         name="note"
                         rows="3"
-                        placeholder="Masukkan nomor surat jalan atau catatan lain..."
+                        placeholder="Masukkan keterangan masuknya barang..."
                         class="w-full rounded-lg border border-slate-300
                             px-4 py-2.5 text-sm outline-none transition
                             focus:border-blue-500 focus:ring-2

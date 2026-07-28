@@ -132,7 +132,7 @@
                                 px-4 py-2.5 text-sm font-semibold
                                 text-white transition hover:bg-slate-800"
                         >
-                            Filter
+                            Cari
                         </button>
 
                         <a

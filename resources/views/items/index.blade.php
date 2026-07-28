@@ -198,7 +198,7 @@
                                 text-white transition
                                 hover:bg-slate-800"
                         >
-                            Filter
+                            Cari
                         </button>
 
                         <a
