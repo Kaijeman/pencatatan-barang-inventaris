@@ -1,7 +1,8 @@
 {{-- Modal global untuk konfirmasi dan pemberitahuan. --}}
 <div
     id="app-modal"
-    class="fixed inset-0 z-[100] hidden items-center justify-center p-4"
+    class="fixed inset-0 z-[100] hidden items-center
+        justify-center p-4"
     aria-hidden="true"
 >
     {{-- Latar belakang modal. --}}
@@ -12,22 +13,22 @@
 
     {{-- Kotak modal. --}}
     <div
-        class="relative z-10 w-full max-w-md overflow-hidden
-            rounded-2xl bg-white shadow-2xl"
+        class="relative z-10 w-full max-w-sm overflow-hidden
+            rounded-2xl bg-white shadow-2xl sm:max-w-md"
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-modal-title"
         aria-describedby="app-modal-message"
     >
-        <div class="p-6">
+        {{-- Isi utama modal. --}}
+        <div class="p-5 sm:p-6">
             <div class="flex items-start gap-4">
-
                 {{-- Ikon modal. --}}
                 <div
                     id="app-modal-icon-wrapper"
-                    class="flex h-12 w-12 flex-shrink-0 items-center
-                        justify-center rounded-full bg-amber-100
-                        text-xl text-amber-700"
+                    class="flex h-12 w-12 flex-shrink-0
+                        items-center justify-center rounded-full
+                        bg-amber-100 text-xl text-amber-700"
                 >
                     <i
                         id="app-modal-icon"
@@ -35,11 +36,12 @@
                     ></i>
                 </div>
 
-                {{-- Isi modal. --}}
+                {{-- Teks modal. --}}
                 <div class="min-w-0 flex-1">
                     <h2
                         id="app-modal-title"
-                        class="text-lg font-bold text-slate-800"
+                        class="text-base font-bold text-slate-800
+                            sm:text-lg"
                     >
                         Konfirmasi
                     </h2>
@@ -55,16 +57,20 @@
 
         {{-- Tombol aksi modal. --}}
         <div
-            class="flex flex-col-reverse gap-3 border-t
-                border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row
-                sm:justify-end"
+            id="app-modal-actions"
+            class="grid grid-cols-2 gap-3 border-t
+                border-slate-200 bg-slate-50 px-4 py-4
+                sm:px-6"
         >
             <button
                 type="button"
                 id="app-modal-cancel"
-                class="rounded-lg border border-slate-300 bg-white
-                    px-5 py-2.5 text-sm font-semibold text-slate-600
-                    transition hover:bg-slate-100 focus:outline-none
+                class="inline-flex min-h-11 w-full min-w-0
+                    items-center justify-center rounded-lg
+                    border border-slate-300 bg-white px-3
+                    py-2.5 text-center text-sm font-semibold
+                    leading-5 text-slate-600 transition
+                    hover:bg-slate-100 focus:outline-none
                     focus:ring-2 focus:ring-slate-200"
             >
                 Batal
@@ -73,10 +79,13 @@
             <button
                 type="button"
                 id="app-modal-confirm"
-                class="rounded-lg bg-amber-600 px-5 py-2.5
-                    text-sm font-semibold text-white transition
-                    hover:bg-amber-700 focus:outline-none
-                    focus:ring-2 focus:ring-amber-200"
+                class="inline-flex min-h-11 w-full min-w-0
+                    items-center justify-center rounded-lg
+                    bg-amber-600 px-3 py-2.5 text-center
+                    text-sm font-semibold leading-5 text-white
+                    transition hover:bg-amber-700
+                    focus:outline-none focus:ring-2
+                    focus:ring-amber-200"
             >
                 Lanjutkan
             </button>
@@ -86,7 +95,10 @@
 
 <script>
     (() => {
-        const modal = document.getElementById('app-modal');
+        const modal = document.getElementById(
+            'app-modal'
+        );
+
         const backdrop = document.getElementById(
             'app-modal-backdrop'
         );
@@ -107,6 +119,10 @@
             'app-modal-icon'
         );
 
+        const actionsContainer = document.getElementById(
+            'app-modal-actions'
+        );
+
         const cancelButton = document.getElementById(
             'app-modal-cancel'
         );
@@ -114,6 +130,20 @@
         const confirmButton = document.getElementById(
             'app-modal-confirm'
         );
+
+        if (
+            ! modal
+            || ! backdrop
+            || ! titleElement
+            || ! messageElement
+            || ! iconWrapper
+            || ! iconElement
+            || ! actionsContainer
+            || ! cancelButton
+            || ! confirmButton
+        ) {
+            return;
+        }
 
         let modalResolver = null;
         let previousFocusedElement = null;
@@ -133,10 +163,13 @@
                     'bi bi-exclamation-triangle',
 
                 confirmButton:
-                    'rounded-lg bg-amber-600 px-5 py-2.5 ' +
-                    'text-sm font-semibold text-white transition ' +
-                    'hover:bg-amber-700 focus:outline-none ' +
-                    'focus:ring-2 focus:ring-amber-200',
+                    'inline-flex min-h-11 w-full min-w-0 ' +
+                    'items-center justify-center rounded-lg ' +
+                    'bg-amber-600 px-3 py-2.5 text-center ' +
+                    'text-sm font-semibold leading-5 text-white ' +
+                    'transition hover:bg-amber-700 ' +
+                    'focus:outline-none focus:ring-2 ' +
+                    'focus:ring-amber-200',
             },
 
             danger: {
@@ -149,10 +182,13 @@
                     'bi bi-trash',
 
                 confirmButton:
-                    'rounded-lg bg-red-600 px-5 py-2.5 ' +
-                    'text-sm font-semibold text-white transition ' +
-                    'hover:bg-red-700 focus:outline-none ' +
-                    'focus:ring-2 focus:ring-red-200',
+                    'inline-flex min-h-11 w-full min-w-0 ' +
+                    'items-center justify-center rounded-lg ' +
+                    'bg-red-600 px-3 py-2.5 text-center ' +
+                    'text-sm font-semibold leading-5 text-white ' +
+                    'transition hover:bg-red-700 ' +
+                    'focus:outline-none focus:ring-2 ' +
+                    'focus:ring-red-200',
             },
 
             info: {
@@ -165,10 +201,13 @@
                     'bi bi-info-circle',
 
                 confirmButton:
-                    'rounded-lg bg-blue-600 px-5 py-2.5 ' +
-                    'text-sm font-semibold text-white transition ' +
-                    'hover:bg-blue-700 focus:outline-none ' +
-                    'focus:ring-2 focus:ring-blue-200',
+                    'inline-flex min-h-11 w-full min-w-0 ' +
+                    'items-center justify-center rounded-lg ' +
+                    'bg-blue-600 px-3 py-2.5 text-center ' +
+                    'text-sm font-semibold leading-5 text-white ' +
+                    'transition hover:bg-blue-700 ' +
+                    'focus:outline-none focus:ring-2 ' +
+                    'focus:ring-blue-200',
             },
 
             success: {
@@ -181,10 +220,13 @@
                     'bi bi-check-circle',
 
                 confirmButton:
-                    'rounded-lg bg-green-600 px-5 py-2.5 ' +
-                    'text-sm font-semibold text-white transition ' +
-                    'hover:bg-green-700 focus:outline-none ' +
-                    'focus:ring-2 focus:ring-green-200',
+                    'inline-flex min-h-11 w-full min-w-0 ' +
+                    'items-center justify-center rounded-lg ' +
+                    'bg-green-600 px-3 py-2.5 text-center ' +
+                    'text-sm font-semibold leading-5 text-white ' +
+                    'transition hover:bg-green-700 ' +
+                    'focus:outline-none focus:ring-2 ' +
+                    'focus:ring-green-200',
             },
         };
 
@@ -196,9 +238,14 @@
             modal.classList.remove('flex');
             modal.setAttribute('aria-hidden', 'true');
 
-            document.body.classList.remove('overflow-hidden');
+            document.body.classList.remove(
+                'overflow-hidden'
+            );
 
-            if (previousFocusedElement) {
+            if (
+                previousFocusedElement
+                instanceof HTMLElement
+            ) {
                 previousFocusedElement.focus();
             }
 
@@ -212,14 +259,18 @@
          * Membuka modal global.
          */
         function openModal(options = {}) {
-            const type = options.type ?? 'warning';
-            const style = modalStyles[type]
+            const type =
+                options.type ?? 'warning';
+
+            const style =
+                modalStyles[type]
                 ?? modalStyles.warning;
 
             previousFocusedElement =
                 document.activeElement;
 
-            cancelAllowed = options.showCancel !== false;
+            cancelAllowed =
+                options.showCancel !== false;
 
             titleElement.textContent =
                 options.title ?? 'Konfirmasi';
@@ -247,11 +298,25 @@
                 ! cancelAllowed
             );
 
+            /**
+             * Menampilkan dua kolom untuk konfirmasi dan
+             * satu kolom untuk pemberitahuan biasa.
+             */
+            actionsContainer.style.gridTemplateColumns =
+                cancelAllowed
+                    ? 'repeat(2, minmax(0, 1fr))'
+                    : 'minmax(0, 1fr)';
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            modal.setAttribute('aria-hidden', 'false');
+            modal.setAttribute(
+                'aria-hidden',
+                'false'
+            );
 
-            document.body.classList.add('overflow-hidden');
+            document.body.classList.add(
+                'overflow-hidden'
+            );
 
             window.setTimeout(() => {
                 confirmButton.focus();
@@ -270,13 +335,20 @@
             options = {}
         ) {
             return openModal({
-                title: options.title ?? 'Konfirmasi',
+                title:
+                    options.title ?? 'Konfirmasi',
+
                 message,
-                type: options.type ?? 'warning',
+
+                type:
+                    options.type ?? 'warning',
+
                 confirmText:
                     options.confirmText ?? 'Lanjutkan',
+
                 cancelText:
                     options.cancelText ?? 'Batal',
+
                 showCancel: true,
             });
         };
@@ -291,10 +363,15 @@
             return openModal({
                 title:
                     options.title ?? 'Pemberitahuan',
+
                 message,
-                type: options.type ?? 'info',
+
+                type:
+                    options.type ?? 'info',
+
                 confirmText:
                     options.confirmText ?? 'Mengerti',
+
                 showCancel: false,
             });
         };
@@ -302,41 +379,59 @@
         /**
          * Menangani tombol konfirmasi.
          */
-        confirmButton.addEventListener('click', () => {
-            closeModal(true);
-        });
+        confirmButton.addEventListener(
+            'click',
+            () => {
+                closeModal(true);
+            }
+        );
 
         /**
          * Menangani tombol batal.
          */
-        cancelButton.addEventListener('click', () => {
-            closeModal(false);
-        });
+        cancelButton.addEventListener(
+            'click',
+            () => {
+                closeModal(false);
+            }
+        );
 
         /**
          * Menutup modal melalui latar belakang.
          */
-        backdrop.addEventListener('click', () => {
-            closeModal(cancelAllowed ? false : true);
-        });
+        backdrop.addEventListener(
+            'click',
+            () => {
+                closeModal(
+                    cancelAllowed ? false : true
+                );
+            }
+        );
 
         /**
          * Menangani tombol Escape.
          */
-        document.addEventListener('keydown', (event) => {
-            if (
-                event.key !== 'Escape'
-                || modal.classList.contains('hidden')
-            ) {
-                return;
-            }
+        document.addEventListener(
+            'keydown',
+            (event) => {
+                if (
+                    event.key !== 'Escape'
+                    || modal.classList.contains(
+                        'hidden'
+                    )
+                ) {
+                    return;
+                }
 
-            closeModal(cancelAllowed ? false : true);
-        });
+                closeModal(
+                    cancelAllowed ? false : true
+                );
+            }
+        );
 
         /**
          * Menangani seluruh form yang membutuhkan
-         * konfirmasi tanpa confirm bawaan browser.
+         * konfirmasi tanpa popup bawaan browser.
          */
         document.addEventListener(
             'submit',
@@ -354,42 +449,54 @@
                     form.dataset.confirmApproved
                     === 'true'
                 ) {
-                    delete form.dataset.confirmApproved;
+                    delete form.dataset
+                        .confirmApproved;
+
                     return;
                 }
 
                 event.preventDefault();
 
-                const confirmed = await window.appConfirm(
-                    form.dataset.confirm,
-                    {
-                        title:
-                            form.dataset.confirmTitle
-                            ?? 'Konfirmasi',
+                const confirmed =
+                    await window.appConfirm(
+                        form.dataset.confirm,
+                        {
+                            title:
+                                form.dataset
+                                    .confirmTitle
+                                ?? 'Konfirmasi',
 
-                        type:
-                            form.dataset.confirmType
-                            ?? 'warning',
+                            type:
+                                form.dataset
+                                    .confirmType
+                                ?? 'warning',
 
-                        confirmText:
-                            form.dataset.confirmButton
-                            ?? 'Lanjutkan',
+                            confirmText:
+                                form.dataset
+                                    .confirmButton
+                                ?? 'Lanjutkan',
 
-                        cancelText:
-                            form.dataset.cancelButton
-                            ?? 'Batal',
-                    }
-                );
+                            cancelText:
+                                form.dataset
+                                    .cancelButton
+                                ?? 'Batal',
+                        }
+                    );
 
                 if (! confirmed) {
                     return;
                 }
 
-                form.dataset.confirmApproved = 'true';
+                form.dataset.confirmApproved =
+                    'true';
 
-                form.requestSubmit(
-                    event.submitter ?? undefined
-                );
+                if (event.submitter) {
+                    form.requestSubmit(
+                        event.submitter
+                    );
+                } else {
+                    form.requestSubmit();
+                }
             }
         );
     })();

@@ -17,7 +17,6 @@
     @endphp
 
     <div class="mx-auto max-w-6xl space-y-6">
-
         {{-- Judul halaman. --}}
         <div>
             <h1 class="text-2xl font-bold text-slate-800">
@@ -32,8 +31,8 @@
         @if ($suppliers->isEmpty() || $items->isEmpty())
             {{-- Peringatan data master belum tersedia. --}}
             <div
-                class="rounded-lg border border-amber-200 bg-amber-50
-                    px-4 py-3 text-sm text-amber-700"
+                class="rounded-lg border border-amber-200
+                    bg-amber-50 px-4 py-3 text-sm text-amber-700"
             >
                 Data supplier dan barang harus tersedia sebelum membuat
                 transaksi barang masuk.
@@ -43,8 +42,8 @@
         {{-- Kesalahan validasi umum. --}}
         @if ($errors->any())
             <div
-                class="rounded-lg border border-red-200 bg-red-50
-                    px-4 py-3 text-sm text-red-700"
+                class="rounded-lg border border-red-200
+                    bg-red-50 px-4 py-3 text-sm text-red-700"
             >
                 Terdapat data yang belum benar. Periksa kembali formulir.
             </div>
@@ -58,12 +57,13 @@
             @csrf
 
             {{-- Informasi transaksi. --}}
-            <div class="rounded-xl bg-white p-6 shadow-sm">
+            <div class="rounded-xl bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="mb-5 text-lg font-semibold text-slate-800">
                     Informasi Penerimaan
                 </h2>
 
                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {{-- Supplier. --}}
                     <div>
                         <label
                             for="supplier_id"
@@ -77,10 +77,12 @@
                         <select
                             id="supplier_id"
                             name="supplier_id"
-                            class="w-full rounded-lg border px-4 py-2.5
-                                text-sm outline-none transition
+                            required
+                            class="w-full rounded-lg border px-4
+                                py-2.5 text-sm outline-none transition
                                 @error('supplier_id')
-                                    border-red-500
+                                    border-red-500 focus:border-red-500
+                                    focus:ring-2 focus:ring-red-200
                                 @else
                                     border-slate-300
                                     focus:border-blue-500
@@ -111,6 +113,7 @@
                         @enderror
                     </div>
 
+                    {{-- Tanggal penerimaan. --}}
                     <div>
                         <label
                             for="received_at"
@@ -130,10 +133,12 @@
                                 now()->format('Y-m-d')
                             ) }}"
                             max="{{ now()->format('Y-m-d') }}"
-                            class="w-full rounded-lg border px-4 py-2.5
-                                text-sm outline-none transition
+                            required
+                            class="w-full rounded-lg border px-4
+                                py-2.5 text-sm outline-none transition
                                 @error('received_at')
-                                    border-red-500
+                                    border-red-500 focus:border-red-500
+                                    focus:ring-2 focus:ring-red-200
                                 @else
                                     border-slate-300
                                     focus:border-blue-500
@@ -149,6 +154,7 @@
                     </div>
                 </div>
 
+                {{-- Catatan transaksi. --}}
                 <div class="mt-6">
                     <label
                         for="note"
@@ -163,8 +169,9 @@
                         name="note"
                         rows="3"
                         placeholder="Masukkan keterangan masuknya barang..."
-                        class="w-full rounded-lg border border-slate-300
-                            px-4 py-2.5 text-sm outline-none transition
+                        class="w-full rounded-lg border
+                            border-slate-300 px-4 py-2.5 text-sm
+                            outline-none transition
                             focus:border-blue-500 focus:ring-2
                             focus:ring-blue-200"
                     >{{ old('note') }}</textarea>
@@ -177,10 +184,10 @@
                 </div>
             </div>
 
-            {{-- Detail barang. --}}
-            <div class="rounded-xl bg-white p-6 shadow-sm">
+            {{-- Detail barang masuk. --}}
+            <div class="rounded-xl bg-white p-4 shadow-sm sm:p-6">
                 <div
-                    class="mb-5 flex flex-col gap-3 sm:flex-row
+                    class="flex flex-col gap-4 sm:flex-row
                         sm:items-center sm:justify-between"
                 >
                     <div>
@@ -193,13 +200,14 @@
                         </p>
                     </div>
 
+                    {{-- Tombol tambah baris pada desktop. --}}
                     <button
                         type="button"
-                        id="add-item-row"
-                        class="inline-flex items-center justify-center
-                            gap-2 rounded-lg bg-slate-700 px-4 py-2.5
-                            text-sm font-semibold text-white transition
-                            hover:bg-slate-800"
+                        data-add-item-row
+                        class="hidden items-center justify-center
+                            gap-2 rounded-lg bg-slate-700 px-4
+                            py-2.5 text-sm font-semibold text-white
+                            transition hover:bg-slate-800 sm:inline-flex"
                     >
                         <i class="bi bi-plus-lg"></i>
 
@@ -207,166 +215,212 @@
                     </button>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
-                        <thead>
-                            <tr class="border-b border-slate-200">
-                                <th
-                                    class="px-3 py-3 text-left text-xs
+                {{-- Header kolom desktop. --}}
+                <div
+                    class="mt-6 hidden gap-4 border-b
+                        border-slate-200 px-3 pb-3 text-xs
+                        font-semibold uppercase tracking-wide
+                        text-slate-500 md:grid
+                        md:grid-cols-[minmax(0,2fr)_8rem_12rem_3rem]"
+                >
+                    <div>Barang</div>
+                    <div>Jumlah</div>
+                    <div>Harga Beli</div>
+                    <div class="text-center">Aksi</div>
+                </div>
+
+                {{-- Daftar detail barang. --}}
+                <div
+                    id="item-rows"
+                    class="mt-4 space-y-4 md:space-y-0"
+                >
+                    @foreach ($formItems as $index => $formItem)
+                        <div
+                            class="item-row grid grid-cols-1 gap-4
+                                rounded-xl border border-slate-200
+                                bg-slate-50 p-4
+                                md:grid-cols-[minmax(0,2fr)_8rem_12rem_3rem]
+                                md:items-start md:rounded-none
+                                md:border-x-0 md:border-t-0
+                                md:bg-white md:px-3 md:py-4"
+                        >
+                            {{-- Pilihan barang. --}}
+                            <div class="min-w-0">
+                                <label
+                                    class="mb-2 block text-xs
                                         font-semibold uppercase
-                                        text-slate-500"
+                                        tracking-wide text-slate-500
+                                        md:hidden"
                                 >
                                     Barang
-                                </th>
+                                </label>
 
-                                <th
-                                    class="w-40 px-3 py-3 text-left
-                                        text-xs font-semibold uppercase
-                                        text-slate-500"
+                                <select
+                                    name="items[{{ $index }}][item_id]"
+                                    required
+                                    class="item-select w-full min-w-0
+                                        rounded-lg border
+                                        border-slate-300 bg-white
+                                        px-3 py-2.5 text-sm
+                                        text-slate-700 outline-none
+                                        transition focus:border-blue-500
+                                        focus:ring-2 focus:ring-blue-200"
+                                >
+                                    <option value="">
+                                        Pilih barang
+                                    </option>
+
+                                    @foreach ($items as $item)
+                                        <option
+                                            value="{{ $item->id }}"
+                                            data-price="{{ $item->purchase_price }}"
+                                            @selected(
+                                                (
+                                                    $formItem[
+                                                        'item_id'
+                                                    ] ?? ''
+                                                ) == $item->id
+                                            )
+                                        >
+                                            {{ $item->name }}
+                                            — {{ $item->unit }}
+                                            — stok
+                                            {{ number_format(
+                                                (int) $item->stock
+                                            ) }}
+                                            {{ $item->unit }}
+                                        </option>
+                                    @endforeach
+                                </select>
+
+                                @error("items.$index.item_id")
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+                            </div>
+
+                            {{-- Jumlah barang. --}}
+                            <div>
+                                <label
+                                    class="mb-2 block text-xs
+                                        font-semibold uppercase
+                                        tracking-wide text-slate-500
+                                        md:hidden"
                                 >
                                     Jumlah
-                                </th>
+                                </label>
 
-                                <th
-                                    class="w-64 px-3 py-3 text-left
-                                        text-xs font-semibold uppercase
-                                        text-slate-500"
+                                <input
+                                    type="number"
+                                    name="items[{{ $index }}][quantity]"
+                                    value="{{ $formItem[
+                                        'quantity'
+                                    ] ?? 1 }}"
+                                    min="1"
+                                    step="1"
+                                    required
+                                    class="w-full rounded-lg border
+                                        border-slate-300 bg-white
+                                        px-3 py-2.5 text-sm
+                                        text-slate-700 outline-none
+                                        transition focus:border-blue-500
+                                        focus:ring-2 focus:ring-blue-200"
+                                >
+
+                                @error("items.$index.quantity")
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+                            </div>
+
+                            {{-- Harga beli. --}}
+                            <div>
+                                <label
+                                    class="mb-2 block text-xs
+                                        font-semibold uppercase
+                                        tracking-wide text-slate-500
+                                        md:hidden"
                                 >
                                     Harga Beli
-                                </th>
+                                </label>
 
-                                <th
-                                    class="w-20 px-3 py-3 text-center
-                                        text-xs font-semibold uppercase
-                                        text-slate-500"
+                                <input
+                                    type="number"
+                                    name="items[{{ $index }}][purchase_price]"
+                                    value="{{ $formItem[
+                                        'purchase_price'
+                                    ] ?? '' }}"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                    class="price-input w-full
+                                        rounded-lg border
+                                        border-slate-300 bg-white
+                                        px-3 py-2.5 text-sm
+                                        text-slate-700 outline-none
+                                        transition focus:border-blue-500
+                                        focus:ring-2 focus:ring-blue-200"
+                                >
+
+                                @error(
+                                    "items.$index.purchase_price"
+                                )
+                                    <p class="mt-2 text-sm text-red-600">
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+                            </div>
+
+                            {{-- Tombol hapus baris. --}}
+                            <div>
+                                <span
+                                    class="mb-2 block text-xs
+                                        font-semibold uppercase
+                                        tracking-wide text-slate-500
+                                        md:hidden"
                                 >
                                     Aksi
-                                </th>
-                            </tr>
-                        </thead>
+                                </span>
 
-                        <tbody id="item-rows">
-                            @foreach ($formItems as $index => $formItem)
-                                <tr
-                                    class="item-row border-b
-                                        border-slate-100"
+                                <button
+                                    type="button"
+                                    title="Hapus baris"
+                                    class="remove-item-row
+                                        inline-flex h-10 w-full
+                                        items-center justify-center
+                                        gap-2 rounded-lg bg-red-100
+                                        px-3 text-sm font-semibold
+                                        text-red-700 transition
+                                        hover:bg-red-200 md:w-10
+                                        md:px-0"
                                 >
-                                    <td class="px-3 py-4">
-                                        <select
-                                            name="items[{{ $index }}][item_id]"
-                                            class="item-select w-full
-                                                rounded-lg border
-                                                border-slate-300 px-3
-                                                py-2.5 text-sm"
-                                        >
-                                            <option value="">
-                                                Pilih barang
-                                            </option>
+                                    <i class="bi bi-trash"></i>
 
-                                            @foreach ($items as $item)
-                                                <option
-                                                    value="{{ $item->id }}"
-                                                    data-price="{{ $item->purchase_price }}"
-                                                    @selected(
-                                                        (
-                                                            $formItem[
-                                                                'item_id'
-                                                            ] ?? ''
-                                                        ) == $item->id
-                                                    )
-                                                >
-                                                    {{ $item->name }}
-                                                    -
-                                                    {{ $item->unit }}
-                                                    (stok:
-                                                    {{ number_format(
-                                                        (int) $item->stock
-                                                    ) }}
-                                                    {{ $item->unit }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-
-                                        @error("items.$index.item_id")
-                                            <p
-                                                class="mt-2 text-sm
-                                                    text-red-600"
-                                            >
-                                                {{ $message }}
-                                            </p>
-                                        @enderror
-                                    </td>
-
-                                    <td class="px-3 py-4">
-                                        <input
-                                            type="number"
-                                            name="items[{{ $index }}][quantity]"
-                                            value="{{ $formItem[
-                                                'quantity'
-                                            ] ?? 1 }}"
-                                            min="1"
-                                            step="1"
-                                            class="w-full rounded-lg
-                                                border border-slate-300
-                                                px-3 py-2.5 text-sm"
-                                        >
-
-                                        @error("items.$index.quantity")
-                                            <p
-                                                class="mt-2 text-sm
-                                                    text-red-600"
-                                            >
-                                                {{ $message }}
-                                            </p>
-                                        @enderror
-                                    </td>
-
-                                    <td class="px-3 py-4">
-                                        <input
-                                            type="number"
-                                            name="items[{{ $index }}][purchase_price]"
-                                            value="{{ $formItem[
-                                                'purchase_price'
-                                            ] ?? '' }}"
-                                            min="0"
-                                            step="0.01"
-                                            class="price-input w-full
-                                                rounded-lg border
-                                                border-slate-300 px-3
-                                                py-2.5 text-sm"
-                                        >
-
-                                        @error(
-                                            "items.$index.purchase_price"
-                                        )
-                                            <p
-                                                class="mt-2 text-sm
-                                                    text-red-600"
-                                            >
-                                                {{ $message }}
-                                            </p>
-                                        @enderror
-                                    </td>
-
-                                    <td class="px-3 py-4 text-center">
-                                        <button
-                                            type="button"
-                                            class="remove-item-row
-                                                inline-flex h-9 w-9
-                                                items-center
-                                                justify-center rounded-lg
-                                                bg-red-100 text-red-700
-                                                transition
-                                                hover:bg-red-200"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                    <span class="md:hidden">
+                                        Hapus Baris
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
+
+                {{-- Tombol tambah baris pada mobile. --}}
+                <button
+                    type="button"
+                    data-add-item-row
+                    class="mt-4 inline-flex w-full items-center
+                        justify-center gap-2 rounded-lg
+                        bg-slate-700 px-4 py-3 text-sm
+                        font-semibold text-white transition
+                        hover:bg-slate-800 sm:hidden"
+                >
+                    <i class="bi bi-plus-lg"></i>
+
+                    Tambah Baris
+                </button>
 
                 @error('items')
                     <p class="mt-3 text-sm text-red-600">
@@ -377,14 +431,15 @@
 
             {{-- Tombol form. --}}
             <div
-                class="flex flex-col-reverse gap-3 sm:flex-row
-                    sm:justify-end"
+                class="flex flex-col-reverse gap-3
+                    sm:flex-row sm:justify-end"
             >
                 <a
                     href="{{ route('goods-receipts.index') }}"
-                    class="rounded-lg border border-slate-300 bg-white
-                        px-5 py-2.5 text-center text-sm font-semibold
-                        text-slate-600 transition hover:bg-slate-50"
+                    class="rounded-lg border border-slate-300
+                        bg-white px-5 py-2.5 text-center
+                        text-sm font-semibold text-slate-600
+                        transition hover:bg-slate-50"
                 >
                     Batal
                 </a>
@@ -396,9 +451,10 @@
                         || $items->isEmpty()
                     )
                     class="inline-flex items-center justify-center
-                        gap-2 rounded-lg bg-blue-600 px-5 py-2.5
-                        text-sm font-semibold text-white transition
-                        hover:bg-blue-700 disabled:cursor-not-allowed
+                        gap-2 rounded-lg bg-blue-600 px-5
+                        py-2.5 text-sm font-semibold text-white
+                        transition hover:bg-blue-700
+                        disabled:cursor-not-allowed
                         disabled:opacity-50"
                 >
                     <i class="bi bi-save"></i>
@@ -411,12 +467,34 @@
 
     {{-- Template baris barang baru. --}}
     <template id="item-row-template">
-        <tr class="item-row border-b border-slate-100">
-            <td class="px-3 py-4">
+        <div
+            class="item-row grid grid-cols-1 gap-4
+                rounded-xl border border-slate-200
+                bg-slate-50 p-4
+                md:grid-cols-[minmax(0,2fr)_8rem_12rem_3rem]
+                md:items-start md:rounded-none
+                md:border-x-0 md:border-t-0
+                md:bg-white md:px-3 md:py-4"
+        >
+            {{-- Pilihan barang. --}}
+            <div class="min-w-0">
+                <label
+                    class="mb-2 block text-xs font-semibold
+                        uppercase tracking-wide text-slate-500
+                        md:hidden"
+                >
+                    Barang
+                </label>
+
                 <select
                     name="items[__INDEX__][item_id]"
-                    class="item-select w-full rounded-lg border
-                        border-slate-300 px-3 py-2.5 text-sm"
+                    required
+                    class="item-select w-full min-w-0
+                        rounded-lg border border-slate-300
+                        bg-white px-3 py-2.5 text-sm
+                        text-slate-700 outline-none transition
+                        focus:border-blue-500 focus:ring-2
+                        focus:ring-blue-200"
                 >
                     <option value="">
                         Pilih barang
@@ -428,51 +506,93 @@
                             data-price="{{ $item->purchase_price }}"
                         >
                             {{ $item->name }}
-                            -
-                            {{ $item->unit }}
-                            (stok:
+                            — {{ $item->unit }}
+                            — stok
                             {{ number_format((int) $item->stock) }}
-                            {{ $item->unit }})
+                            {{ $item->unit }}
                         </option>
                     @endforeach
                 </select>
-            </td>
+            </div>
 
-            <td class="px-3 py-4">
+            {{-- Jumlah barang. --}}
+            <div>
+                <label
+                    class="mb-2 block text-xs font-semibold
+                        uppercase tracking-wide text-slate-500
+                        md:hidden"
+                >
+                    Jumlah
+                </label>
+
                 <input
                     type="number"
                     name="items[__INDEX__][quantity]"
                     value="1"
                     min="1"
                     step="1"
-                    class="w-full rounded-lg border border-slate-300
-                        px-3 py-2.5 text-sm"
+                    required
+                    class="w-full rounded-lg border
+                        border-slate-300 bg-white px-3
+                        py-2.5 text-sm text-slate-700
+                        outline-none transition
+                        focus:border-blue-500 focus:ring-2
+                        focus:ring-blue-200"
                 >
-            </td>
+            </div>
 
-            <td class="px-3 py-4">
+            {{-- Harga beli. --}}
+            <div>
+                <label
+                    class="mb-2 block text-xs font-semibold
+                        uppercase tracking-wide text-slate-500
+                        md:hidden"
+                >
+                    Harga Beli
+                </label>
+
                 <input
                     type="number"
                     name="items[__INDEX__][purchase_price]"
                     min="0"
                     step="0.01"
-                    class="price-input w-full rounded-lg border
-                        border-slate-300 px-3 py-2.5 text-sm"
+                    required
+                    class="price-input w-full rounded-lg
+                        border border-slate-300 bg-white
+                        px-3 py-2.5 text-sm text-slate-700
+                        outline-none transition
+                        focus:border-blue-500 focus:ring-2
+                        focus:ring-blue-200"
                 >
-            </td>
+            </div>
 
-            <td class="px-3 py-4 text-center">
+            {{-- Tombol hapus baris. --}}
+            <div>
+                <span
+                    class="mb-2 block text-xs font-semibold
+                        uppercase tracking-wide text-slate-500
+                        md:hidden"
+                >
+                    Aksi
+                </span>
+
                 <button
                     type="button"
-                    class="remove-item-row inline-flex h-9 w-9
-                        items-center justify-center rounded-lg
-                        bg-red-100 text-red-700 transition
-                        hover:bg-red-200"
+                    title="Hapus baris"
+                    class="remove-item-row inline-flex h-10
+                        w-full items-center justify-center gap-2
+                        rounded-lg bg-red-100 px-3 text-sm
+                        font-semibold text-red-700 transition
+                        hover:bg-red-200 md:w-10 md:px-0"
                 >
                     <i class="bi bi-trash"></i>
+
+                    <span class="md:hidden">
+                        Hapus Baris
+                    </span>
                 </button>
-            </td>
-        </tr>
+            </div>
+        </div>
     </template>
 @endsection
 
@@ -482,22 +602,37 @@
             const rowsContainer =
                 document.getElementById('item-rows');
 
-            const addButton =
-                document.getElementById('add-item-row');
+            const addButtons =
+                document.querySelectorAll(
+                    '[data-add-item-row]'
+                );
 
             const rowTemplate =
                 document.getElementById('item-row-template');
+
+            if (
+                ! rowsContainer
+                || addButtons.length === 0
+                || ! rowTemplate
+            ) {
+                return;
+            }
 
             let rowIndex = rowsContainer
                 .querySelectorAll('.item-row')
                 .length;
 
             /**
-             * Mengisi harga beli berdasarkan barang yang dipilih.
+             * Mengisi harga beli berdasarkan barang terpilih.
              */
             function handleItemChange(event) {
                 const select = event.currentTarget;
                 const row = select.closest('.item-row');
+
+                if (! row) {
+                    return;
+                }
+
                 const priceInput =
                     row.querySelector('.price-input');
 
@@ -505,17 +640,12 @@
                     select.selectedIndex
                 ];
 
-                if (
-                    selectedOption
-                    && selectedOption.dataset.price
-                ) {
-                    priceInput.value =
-                        selectedOption.dataset.price;
-
+                if (! priceInput) {
                     return;
                 }
 
-                priceInput.value = '';
+                priceInput.value =
+                    selectedOption?.dataset.price ?? '';
             }
 
             /**
@@ -535,38 +665,45 @@
                             confirmText: 'Mengerti',
                         }
                     );
+
+                    return;
                 }
 
                 event.currentTarget
                     .closest('.item-row')
-                    .remove();
+                    ?.remove();
             }
 
             /**
              * Memasang event pada satu baris barang.
              */
             function attachRowEvents(row) {
-                row.querySelector('.item-select')
-                    .addEventListener(
-                        'change',
-                        handleItemChange
-                    );
+                const itemSelect =
+                    row.querySelector('.item-select');
 
-                row.querySelector('.remove-item-row')
-                    .addEventListener(
-                        'click',
-                        handleRemoveRow
-                    );
+                const removeButton =
+                    row.querySelector('.remove-item-row');
+
+                itemSelect?.addEventListener(
+                    'change',
+                    handleItemChange
+                );
+
+                removeButton?.addEventListener(
+                    'click',
+                    handleRemoveRow
+                );
             }
 
             /**
              * Menambahkan baris barang baru.
              */
-            addButton.addEventListener('click', () => {
-                const html = rowTemplate.innerHTML.replaceAll(
-                    '__INDEX__',
-                    rowIndex
-                );
+            function addItemRow() {
+                const html =
+                    rowTemplate.innerHTML.replaceAll(
+                        '__INDEX__',
+                        rowIndex
+                    );
 
                 rowsContainer.insertAdjacentHTML(
                     'beforeend',
@@ -576,9 +713,28 @@
                 const newRow =
                     rowsContainer.lastElementChild;
 
-                attachRowEvents(newRow);
+                if (newRow) {
+                    attachRowEvents(newRow);
+
+                    if (window.innerWidth < 640) {
+                        newRow.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                        });
+                    }
+                }
 
                 rowIndex++;
+            }
+
+            /**
+             * Memasang event pada tombol tambah desktop dan mobile.
+             */
+            addButtons.forEach((button) => {
+                button.addEventListener(
+                    'click',
+                    addItemRow
+                );
             });
 
             /**

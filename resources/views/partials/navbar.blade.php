@@ -56,18 +56,21 @@
             </div>
         </div>
 
-        {{-- Bagian kanan navbar. --}}
-        <div class="flex flex-shrink-0 items-center gap-3">
-            {{-- Informasi pengguna. --}}
+        {{-- Informasi pengguna khusus desktop. --}}
+        <div
+            class="hidden flex-shrink-0 items-center gap-3
+                lg:flex"
+        >
+            {{-- Identitas pengguna. --}}
             <div
-                class="hidden items-center gap-3 border-r
-                    border-slate-200 pr-4 md:flex"
+                class="flex items-center gap-3 border-r
+                    border-slate-200 pr-4"
             >
                 {{-- Inisial pengguna. --}}
                 <div
-                    class="flex h-10 w-10 items-center
-                        justify-center rounded-full bg-blue-100
-                        text-sm font-bold text-blue-700"
+                    class="flex h-10 w-10 flex-shrink-0
+                        items-center justify-center rounded-full
+                        bg-blue-100 text-sm font-bold text-blue-700"
                 >
                     {{ $userInitial }}
                 </div>
@@ -83,7 +86,7 @@
                 </div>
             </div>
 
-            {{-- Form logout. --}}
+            {{-- Form logout desktop. --}}
             <form
                 method="POST"
                 action="{{ route('logout') }}"
@@ -100,13 +103,13 @@
                     title="Keluar dari aplikasi"
                     class="inline-flex items-center justify-center
                         gap-2 rounded-lg border border-red-200
-                        bg-red-50 px-3 py-2.5 text-sm font-semibold
+                        bg-red-50 px-4 py-2.5 text-sm font-semibold
                         text-red-700 transition hover:border-red-300
-                        hover:bg-red-100 sm:px-4"
+                        hover:bg-red-100"
                 >
                     <i class="bi bi-box-arrow-right text-base"></i>
 
-                    <span class="hidden sm:inline">
+                    <span>
                         Logout
                     </span>
                 </button>

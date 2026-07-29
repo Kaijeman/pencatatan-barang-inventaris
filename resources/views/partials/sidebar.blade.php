@@ -1,3 +1,17 @@
+@php
+    /**
+     * Mendapatkan pengguna yang sedang login.
+     */
+    $sidebarUser = auth()->user();
+
+    /**
+     * Membuat inisial nama pengguna.
+     */
+    $sidebarUserInitial = strtoupper(
+        mb_substr($sidebarUser->name, 0, 1)
+    );
+@endphp
+
 {{-- Sidebar utama aplikasi. --}}
 <aside
     id="sidebar"
@@ -32,7 +46,7 @@
     </div>
 
     {{-- Navigasi sidebar. --}}
-    <nav class="flex-1 overflow-y-auto py-5">
+    <nav class="min-h-0 flex-1 overflow-y-auto py-5">
         {{-- Menu dashboard. --}}
         <a
             href="{{ route('dashboard') }}"
@@ -223,6 +237,70 @@
             </span>
         </a>
     </nav>
+
+    {{-- Informasi pengguna dan logout khusus mobile. --}}
+    <div
+        class="flex-shrink-0 border-t border-slate-700
+            bg-slate-900/40 p-3 lg:hidden"
+    >
+        <div
+            class="flex items-center justify-between gap-3
+                rounded-xl bg-slate-700/70 p-3"
+        >
+            {{-- Informasi pengguna. --}}
+            <div class="flex min-w-0 flex-1 items-center gap-3">
+                {{-- Inisial pengguna. --}}
+                <div
+                    class="flex h-10 w-10 flex-shrink-0
+                        items-center justify-center rounded-full
+                        bg-blue-500 text-sm font-bold text-white"
+                >
+                    {{ $sidebarUserInitial }}
+                </div>
+
+                {{-- Nama pengguna. --}}
+                <div class="min-w-0 flex-1">
+                    <p
+                        class="truncate text-sm font-semibold
+                            text-white"
+                    >
+                        {{ $sidebarUser->name }}
+                    </p>
+
+                    <p class="truncate text-xs text-slate-300">
+                        {{ $sidebarUser->email }}
+                    </p>
+                </div>
+            </div>
+
+            {{-- Form logout mobile. --}}
+            <form
+                method="POST"
+                action="{{ route('logout') }}"
+                data-confirm="Apakah Anda yakin ingin keluar dari aplikasi?"
+                data-confirm-title="Konfirmasi Logout"
+                data-confirm-type="warning"
+                data-confirm-button="Ya, Keluar"
+                data-cancel-button="Tetap Masuk"
+                class="flex-shrink-0"
+            >
+                @csrf
+
+                <button
+                    type="submit"
+                    title="Keluar dari aplikasi"
+                    aria-label="Keluar dari aplikasi"
+                    class="inline-flex h-10 w-10 items-center
+                        justify-center rounded-lg
+                        border border-red-400/30 bg-red-500/15
+                        text-red-300 transition hover:border-red-400
+                        hover:bg-red-500 hover:text-white"
+                >
+                    <i class="bi bi-box-arrow-right text-lg"></i>
+                </button>
+            </form>
+        </div>
+    </div>
 </aside>
 
 {{-- Latar belakang ketika sidebar dibuka pada perangkat kecil. --}}
