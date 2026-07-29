@@ -196,9 +196,7 @@
                         </button>
 
                         <a
-                            href="{{ route(
-                                'reports.goods-issues'
-                            ) }}"
+                            href="{{ route('reports.goods-issues') }}"
                             class="rounded-lg border border-slate-300
                                 px-4 py-2.5 text-center text-sm
                                 font-semibold text-slate-600
