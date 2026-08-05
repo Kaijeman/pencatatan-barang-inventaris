@@ -70,15 +70,24 @@
                         @enderror
                     </div>
 
-                    {{-- Tombol pencarian --}}
+                    {{-- Tombol filter. --}}
                     <div class="flex gap-2">
-                        <button type="submit"
-                                class="rounded-lg bg-slate-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
+                        <button
+                            type="submit"
+                            class="flex-1 rounded-lg bg-slate-700
+                                px-4 py-2.5 text-sm font-semibold
+                                text-white transition hover:bg-slate-800"
+                        >
                             Cari
                         </button>
 
-                        <a href="{{ route('suppliers.index') }}"
-                           class="rounded-lg border border-slate-300 px-5 py-2.5 text-center text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+                        <a
+                            href="{{ route('suppliers.index') }}"
+                            class="rounded-lg border border-slate-300
+                                px-4 py-2.5 text-center text-sm
+                                font-semibold text-slate-600 transition
+                                hover:bg-slate-50"
+                        >
                             Reset
                         </a>
                     </div>

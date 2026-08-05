@@ -22,13 +22,13 @@
     >
         {{-- Bagian kiri navbar. --}}
         <div class="flex min-w-0 items-center gap-3">
-
             {{-- Tombol membuka dan menutup sidebar. --}}
             <button
                 type="button"
-                id="toggleSidebar"
+                data-sidebar-toggle
                 title="Buka atau tutup sidebar"
                 aria-label="Buka atau tutup sidebar"
+                aria-expanded="true"
                 class="inline-flex h-10 w-10 flex-shrink-0
                     items-center justify-center rounded-lg
                     border border-slate-200 text-slate-600
@@ -44,7 +44,7 @@
                     class="truncate text-base font-bold
                         text-slate-800 sm:text-lg"
                 >
-                    Sistem Gudang
+                    {{ config('app.name') }}
                 </h1>
 
                 <p
@@ -56,24 +56,26 @@
             </div>
         </div>
 
-        {{-- Bagian kanan navbar. --}}
-        <div class="flex flex-shrink-0 items-center gap-3">
-
-            {{-- Informasi pengguna. --}}
+        {{-- Informasi pengguna khusus desktop. --}}
+        <div
+            class="hidden flex-shrink-0 items-center gap-3
+                lg:flex"
+        >
+            {{-- Identitas pengguna. --}}
             <div
-                class="hidden items-center gap-3 border-r
-                    border-slate-200 pr-4 md:flex"
+                class="flex items-center gap-3 border-r
+                    border-slate-200 pr-4"
             >
                 {{-- Inisial pengguna. --}}
                 <div
-                    class="flex h-10 w-10 items-center
-                        justify-center rounded-full bg-blue-100
-                        text-sm font-bold text-blue-700"
+                    class="flex h-10 w-10 flex-shrink-0
+                        items-center justify-center rounded-full
+                        bg-blue-100 text-sm font-bold text-blue-700"
                 >
                     {{ $userInitial }}
                 </div>
 
-                {{-- Nama dan keterangan pengguna. --}}
+                {{-- Nama pengguna. --}}
                 <div class="max-w-48">
                     <p
                         class="truncate text-sm font-semibold
@@ -81,14 +83,10 @@
                     >
                         {{ $authenticatedUser->name }}
                     </p>
-
-                    <!-- <p class="truncate text-xs text-slate-500">
-                        Pengguna Sistem
-                    </p> -->
                 </div>
             </div>
 
-            {{-- Form logout. --}}
+            {{-- Form logout desktop. --}}
             <form
                 method="POST"
                 action="{{ route('logout') }}"
@@ -103,15 +101,15 @@
                 <button
                     type="submit"
                     title="Keluar dari aplikasi"
-                    class="inline-flex items-center justify-center gap-2
-                        rounded-lg border border-red-200 bg-red-50
-                        px-3 py-2.5 text-sm font-semibold text-red-700
-                        transition hover:border-red-300 hover:bg-red-100
-                        sm:px-4"
+                    class="inline-flex items-center justify-center
+                        gap-2 rounded-lg border border-red-200
+                        bg-red-50 px-4 py-2.5 text-sm font-semibold
+                        text-red-700 transition hover:border-red-300
+                        hover:bg-red-100"
                 >
                     <i class="bi bi-box-arrow-right text-base"></i>
 
-                    <span class="hidden sm:inline">
+                    <span>
                         Logout
                     </span>
                 </button>

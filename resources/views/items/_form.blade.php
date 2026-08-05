@@ -53,7 +53,7 @@
                    id="name"
                    name="name"
                    value="{{ old('name', isset($item) ? $item->name : '') }}"
-                   placeholder="Contoh: Laptop Lenovo"
+                   placeholder="Contoh: Barang A"
                    class="w-full rounded-lg border px-4 py-2.5 text-sm text-slate-700 outline-none transition
                         @error('name')
                             border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200

@@ -13,7 +13,7 @@
                id="name"
                name="name"
                value="{{ old('name', isset($category) ? $category->name : '') }}"
-               placeholder="Contoh: Elektronik"
+               placeholder="Contoh: Material"
                autofocus
                class="w-full rounded-lg border px-4 py-2.5 text-sm text-slate-700 outline-none transition
                     @error('name')

@@ -17,6 +17,17 @@
         @yield('title', 'Login') - {{ config('app.name') }}
     </title>
 
+    <link
+        rel="icon"
+        type="image/webp"
+        href="{{ asset('images/logo.webp') }}"
+    >
+
+    <link
+        rel="shortcut icon"
+        href="{{ asset('images/logo.webp') }}"
+    >
+
     {{-- Font aplikasi. --}}
     <link
         rel="preconnect"
